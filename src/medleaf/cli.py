@@ -536,6 +536,51 @@ def _cmd_search(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _cmd_eval(args: argparse.Namespace, settings: Settings) -> int:
+    """Score one split, write the result file and optionally gate it on a baseline."""
+    from medleaf.eval.runner import TOP_K, evaluate, gate, load_questions, write_result
+    from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
+    from medleaf.retrieval.service import RetrievalService
+
+    service = RetrievalService(settings)
+
+    def search(query: str) -> list[str]:
+        return [hit.chunk_id for hit in service.search(query, limit=TOP_K).results]
+
+    questions = load_questions(args.dataset, args.split)
+    try:
+        result = evaluate(questions, search)
+    except (IndexMissingError, RetrievalUnavailableError) as error:
+        print(f"eval aborted, retrieval unavailable: {error}", file=sys.stderr)
+        return 2
+    manifest = service.manifest()
+    result = {
+        "split": args.split,
+        "dataset": args.dataset.as_posix(),
+        "corpus_version": manifest.corpus_version,
+        "embed_model": f"{manifest.embed_model}@{manifest.embed_revision}",
+        **result,
+    }
+    path = write_result(result, args.out, args.split)
+    overall = result["overall"]
+    print(
+        f"{args.split}: Recall@5 {overall['recall_at_5']['hits']}/{overall['total']} "
+        f"({overall['recall_at_5']['rate']:.2%}), Recall@10 "
+        f"{overall['recall_at_10']['hits']}/{overall['total']}, MRR@10 {overall['mrr_at_10']}"
+    )
+    for lang, row in result["by_lang"].items():
+        print(f"  {lang}: Recall@5 {row['recall_at_5']['hits']}/{row['total']}")
+    print(f"result: {path}")
+    if args.baseline is None:
+        return 0
+    failures = gate(result, json.loads(args.baseline.read_text(encoding="utf-8")))
+    for failure in failures:
+        print(f"GATE FAILED: {failure}", file=sys.stderr)
+    if not failures:
+        print(f"gate passed against {args.baseline}")
+    return 1 if failures else 0
+
+
 def _cmd_index_annotate(args: argparse.Namespace, settings: Settings) -> int:
     """Attach SPEC section 8 payload metadata to an existing index.
 
@@ -653,6 +698,17 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--limit", type=int, default=10, help="number of chunks to return")
     search.add_argument("--json", action="store_true", help="print the full JSON response")
     search.set_defaults(func=_cmd_search)
+
+    evaluate = subparsers.add_parser("eval", help="retrieval eval on a split (SPEC §11)")
+    evaluate.add_argument("--split", choices=["dev", "test"], required=True)
+    evaluate.add_argument(
+        "--dataset", type=Path, default=Path("eval/datasets/retrieval-v1.jsonl")
+    )
+    evaluate.add_argument("--out", type=Path, default=Path("eval/results"))
+    evaluate.add_argument(
+        "--baseline", type=Path, help="fail (exit 1) if Recall@5 regresses against this file"
+    )
+    evaluate.set_defaults(func=_cmd_eval)
     return parser
 
 

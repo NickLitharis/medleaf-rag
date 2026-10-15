@@ -10,27 +10,41 @@ dense scores deterministic, and the real multilingual model is exercised by
 from __future__ import annotations
 
 import os
+import time
 import uuid
 from collections.abc import Iterator, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 from qdrant_client import QdrantClient, models
 
-from medleaf.models import DocKind, Lang, Section
+from medleaf.config import Settings
+from medleaf.ingest.chunk import ChunkBudget
+from medleaf.models import DocKind, Lang, Medicine, Section
+from medleaf.retrieval import pipeline
+from medleaf.retrieval.embed import E5Encoder, PrefixEnforcingEncoder
 from medleaf.retrieval.index import (
+    IndexIncompleteError,
     IndexMissingError,
+    RetrievalUnavailableError,
+    alias_target,
     build_filter,
+    build_manifest,
     collection_count,
     delete_medicine_points,
     ensure_collection,
     hybrid_search,
     load_manifest,
+    point_alias,
     point_id,
     require_index,
     set_medicine_metadata,
     upsert_sections,
+    write_manifest,
 )
+from medleaf.retrieval.pipeline import ParseResult, build_index
+from medleaf.retrieval.service import RetrievalService
 from medleaf.retrieval.text import sparse_vector, token_id, tokenize
 
 pytestmark = pytest.mark.qdrant
@@ -623,3 +637,257 @@ def test_require_index_fails_loudly_and_manifest_must_exist(tmp_path: Path) -> N
         client.close()
     with pytest.raises(IndexMissingError, match="manifest"):
         load_manifest(tmp_path / "manifest.json")
+
+
+def test_require_index_rejects_a_partial_collection(qdrant: QdrantClient, collection: str) -> None:
+    """A build that is still running (or died) must not be served as the full index."""
+    _seed_eliquis(qdrant, collection, HashTestEncoder())
+    require_index(qdrant, collection=collection, corpus_version=None, expected_points=4)
+    with pytest.raises(IndexIncompleteError, match="4 points but the manifest records 8797"):
+        require_index(qdrant, collection=collection, corpus_version=None, expected_points=8797)
+
+
+def test_ready_is_false_while_the_collection_disagrees_with_the_manifest(
+    qdrant: QdrantClient, collection: str, tmp_path: Path
+) -> None:
+    """``/readyz`` reflects the manifest count, not merely a non-empty collection."""
+    encoder = HashTestEncoder()
+    _seed_eliquis(qdrant, collection, encoder)
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+
+    def manifest_with(total: int) -> None:
+        write_manifest(
+            settings.index_manifest_file,
+            build_manifest(
+                collection=collection,
+                corpus_version="v1",
+                corpus_sha256_value="0" * 64,
+                encoder=encoder,
+                dense_vector_name=DENSE,
+                sparse_vector_name=SPARSE,
+                chunk_counts={"eliquis:en": total},
+                medicines=["eliquis"],
+                languages=["en", "el"],
+                missing=[],
+            ),
+        )
+
+    service = RetrievalService(settings, client=qdrant, encoder=encoder)
+    manifest_with(8797)
+    state = service.ready()
+    assert state.ready is False
+    assert "4 points but the manifest records 8797" in state.detail
+    manifest_with(4)
+    assert service.ready().ready is True
+
+
+def _drop_build_collections(qdrant: QdrantClient, served: str) -> None:
+    """Remove the served alias and every ``<served>_<stamp>`` collection a build left."""
+    if alias_target(qdrant, served) is not None:
+        qdrant.update_collection_aliases(
+            change_aliases_operations=[
+                models.DeleteAliasOperation(delete_alias=models.DeleteAlias(alias_name=served))
+            ]
+        )
+    for entry in qdrant.get_collections().collections:
+        if entry.name.startswith(f"{served}_"):
+            qdrant.delete_collection(entry.name)
+
+
+def _fake_corpus(
+    monkeypatch: pytest.MonkeyPatch, settings: Settings, sections: list[Section]
+) -> None:
+    """Stub the parse stage so ``build_index`` runs without PDFs or a tokenizer."""
+    medicine = Medicine.model_construct(  # stub: skips the two-language document check
+        slug="eliquis",
+        name="Eliquis",
+        active_substance="apixaban",
+        epar_url="https://www.ema.europa.eu/en/medicines/human/EPAR/eliquis",
+    )
+    settings.medicines_file.parent.mkdir(parents=True, exist_ok=True)
+    settings.medicines_file.write_text("medicines: []\n", encoding="utf-8")
+    result = ParseResult(medicine=medicine, lang=Lang.EN, sections=sections, origin="parsed")
+    monkeypatch.setattr(pipeline, "load_medicines", lambda _path: [medicine])
+    monkeypatch.setattr(pipeline, "chunk_budget_for", lambda _encoder, _settings: _word_budget())
+    monkeypatch.setattr(pipeline, "parse_corpus", lambda *_args, **_kwargs: ([result], []))
+
+
+def _word_budget() -> ChunkBudget:
+    return ChunkBudget(max_tokens=512, reserve_tokens=0, count_tokens=lambda t: len(t.split()))
+
+
+def _eliquis_sections(count: int) -> list[Section]:
+    return [
+        _section(
+            medicine="eliquis",
+            lang=Lang.EN,
+            doc=DocKind.SMPC,
+            number=f"4.{n}",
+            text=f"Eliquis section {n} text.",
+        )
+        for n in range(count)
+    ]
+
+
+def test_point_alias_migrates_a_plain_collection_then_swaps(
+    qdrant: QdrantClient, collection: str
+) -> None:
+    """The first alias build replaces the old real collection; later ones swap targets."""
+    encoder = HashTestEncoder()
+    old, new = f"{collection}_a", f"{collection}_b"
+    try:
+        _seed_eliquis(qdrant, collection, encoder)  # pre-alias layout: a real collection
+        _seed_eliquis(qdrant, old, encoder)
+        assert point_alias(qdrant, alias=collection, collection=old) is None
+        assert alias_target(qdrant, collection) == old
+        assert collection_count(qdrant, collection=collection) == 4
+
+        ensure_collection(
+            qdrant,
+            collection=new,
+            dense_dim=encoder.dimension,
+            dense_vector_name=DENSE,
+            sparse_vector_name=SPARSE,
+        )
+        assert point_alias(qdrant, alias=collection, collection=new) == old
+        assert alias_target(qdrant, collection) == new
+        assert collection_count(qdrant, collection=collection) == 0
+    finally:
+        _drop_build_collections(qdrant, collection)
+
+
+def test_build_index_swaps_the_alias_and_drops_the_old_build(
+    qdrant: QdrantClient, collection: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A full rebuild serves the previous index until the new one is complete."""
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+    encoder = HashTestEncoder()
+    try:
+        _fake_corpus(monkeypatch, settings, _eliquis_sections(3))
+        build_index(settings=settings, client=qdrant, encoder=encoder, progress=lambda _l: None)
+        first = alias_target(qdrant, collection)
+        assert first is not None
+
+        _fake_corpus(monkeypatch, settings, _eliquis_sections(5))
+        manifest = build_index(
+            settings=settings, client=qdrant, encoder=encoder, progress=lambda _l: None
+        )
+        second = alias_target(qdrant, collection)
+        assert second not in (None, first)
+        assert not qdrant.collection_exists(first)
+        assert manifest.collection == collection
+        assert collection_count(qdrant, collection=collection) == manifest.total_chunks == 5
+    finally:
+        _drop_build_collections(qdrant, collection)
+
+
+def test_failed_build_keeps_serving_the_old_index(
+    qdrant: QdrantClient, collection: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An embedding failure drops the half-built collection and leaves the alias alone."""
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+    encoder = HashTestEncoder()
+    try:
+        _fake_corpus(monkeypatch, settings, _eliquis_sections(3))
+        build_index(settings=settings, client=qdrant, encoder=encoder, progress=lambda _l: None)
+        served = alias_target(qdrant, collection)
+
+        def boom(_texts: Sequence[str]) -> list[list[float]]:
+            raise RuntimeError("encoder crashed")
+
+        monkeypatch.setattr(encoder, "encode_passages", boom)
+        with pytest.raises(RuntimeError, match="encoder crashed"):
+            build_index(
+                settings=settings, client=qdrant, encoder=encoder, progress=lambda _l: None
+            )
+        assert alias_target(qdrant, collection) == served
+        assert collection_count(qdrant, collection=collection) == 3
+        leftovers = [
+            c.name
+            for c in qdrant.get_collections().collections
+            if c.name.startswith(f"{collection}_") and c.name != served
+        ]
+        assert leftovers == []
+    finally:
+        _drop_build_collections(qdrant, collection)
+
+
+def test_a_value_error_from_a_dependency_is_unavailable_not_bad_input(
+    qdrant: QdrantClient, collection: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Only the caller's own input earns a 422; a library ``ValueError`` (e.g. a pydantic
+    ``ValidationError`` inside the Qdrant client) is a server-side failure."""
+    encoder = HashTestEncoder()
+    _seed_eliquis(qdrant, collection, encoder)
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+    write_manifest(
+        settings.index_manifest_file,
+        build_manifest(
+            collection=collection,
+            corpus_version="v1",
+            corpus_sha256_value="0" * 64,
+            encoder=encoder,
+            dense_vector_name=DENSE,
+            sparse_vector_name=SPARSE,
+            chunk_counts={"eliquis:en": 4},
+            medicines=["eliquis"],
+            languages=["en", "el"],
+            missing=[],
+        ),
+    )
+
+    def broken(_texts: Sequence[str]) -> list[list[float]]:
+        raise ValueError("response did not validate")
+
+    monkeypatch.setattr(encoder, "encode_queries", broken)
+    service = RetrievalService(settings, client=qdrant, encoder=encoder)
+    with pytest.raises(RetrievalUnavailableError, match="did not validate"):
+        service.search("bleeding")
+    with pytest.raises(ValueError, match="must not be empty"):
+        service.search("  ")
+
+
+def test_a_query_that_starts_with_the_passage_prefix_is_searched(
+    qdrant: QdrantClient, collection: str, tmp_path: Path
+) -> None:
+    """User text is not a passage; the encoder's prefix guard must not reject it."""
+    encoder = HashTestEncoder()
+    _seed_eliquis(qdrant, collection, encoder)
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+    write_manifest(
+        settings.index_manifest_file,
+        build_manifest(
+            collection=collection,
+            corpus_version="v1",
+            corpus_sha256_value="0" * 64,
+            encoder=encoder,
+            dense_vector_name=DENSE,
+            sparse_vector_name=SPARSE,
+            chunk_counts={"eliquis:en": 4},
+            medicines=["eliquis"],
+            languages=["en", "el"],
+            missing=[],
+        ),
+    )
+    service = RetrievalService(settings, client=qdrant, encoder=PrefixEnforcingEncoder(encoder))
+    response = service.search("passage: active bleeding", lang="en")
+    assert response.results[0].chunk_id.startswith("eliquis:smpc:4.3")
+
+
+def test_concurrent_cold_requests_load_the_model_once(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """FastAPI runs sync endpoints on a thread pool; a cold start must not load N models."""
+    loads: list[int] = []
+
+    def slow_load(**_kwargs: object) -> HashTestEncoder:
+        loads.append(1)
+        time.sleep(0.2)
+        return HashTestEncoder()
+
+    monkeypatch.setattr(E5Encoder, "load", staticmethod(slow_load))
+    service = RetrievalService(Settings(data_dir=tmp_path), client=QdrantClient(":memory:"))
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        encoders = list(pool.map(lambda _i: service.encoder, range(8)))
+    assert len(loads) == 1
+    assert all(encoder is encoders[0] for encoder in encoders)

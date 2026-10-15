@@ -18,6 +18,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: medleaf-rag:local
+    # Rebuild on every `run`/`up` (cached layers make it quick) so a container never
+    # runs code older than the checkout; a stale image once rebuilt the index with an
+    # old parser.
+    pull_policy: build
     profiles: ["index"]
     command: ["python", "-m", "medleaf.cli", "index", "build"]
     environment:
@@ -34,6 +38,10 @@ services:
       context: .
       dockerfile: Dockerfile
     image: medleaf-rag:local
+    # Rebuild on every `run`/`up` (cached layers make it quick) so a container never
+    # runs code older than the checkout; a stale image once rebuilt the index with an
+    # old parser.
+    pull_policy: build
     container_name: medleaf-api
     command:
       - uvicorn

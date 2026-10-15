@@ -1,0 +1,88 @@
+name: eval-retrieval
+
+# SPEC §13 / S8: every PR runs the retrieval eval on the `dev` split and fails when
+# Recall@5 drops by more than one question against eval/baseline.json. No LLM, no secrets.
+# The built index is cached as a Qdrant snapshot. The key covers the corpus pin and all
+# code that shapes the index, so a PR that changes parsing, chunking or embedding rebuilds
+# it (slow: CPU embedding), while a search-only change restores it in seconds.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retrieval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.15.5
+        ports:
+          - 6333:6333
+    env:
+      PYTHONPATH: src
+      MEDLEAF_QDRANT_URL: http://127.0.0.1:6333
+      SNAPSHOT_DIR: .ci/index
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[api,retrieval,dev]"
+
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: data/models
+          key: models-${{ hashFiles('src/medleaf/config.py') }}
+
+      - name: Cache index snapshot
+        id: index
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SNAPSHOT_DIR }}
+          key: index-${{ hashFiles('data/medicines.yaml', 'pyproject.toml', 'src/medleaf/config.py', 'src/medleaf/models.py', 'src/medleaf/sections.py', 'src/medleaf/ingest/**', 'src/medleaf/retrieval/**') }}
+
+      - name: Cache corpus PDFs
+        if: steps.index.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: corpus-${{ hashFiles('data/medicines.yaml') }}
+
+      - name: Build the index and snapshot it (cache miss)
+        if: steps.index.outputs.cache-hit != 'true'
+        run: |
+          python -m medleaf.cli download --workers 2
+          python -m medleaf.cli index build
+          collection=$(curl -sf http://127.0.0.1:6333/aliases \
+            | jq -r '.result.aliases[] | select(.alias_name=="medleaf_chunks") | .collection_name')
+          collection=${collection:-medleaf_chunks}  # pre-alias index: a plain collection
+          name=$(curl -sf -X POST "http://127.0.0.1:6333/collections/$collection/snapshots" | jq -r '.result.name')
+          mkdir -p "$SNAPSHOT_DIR"
+          curl -sf -o "$SNAPSHOT_DIR/index.snapshot" "http://127.0.0.1:6333/collections/$collection/snapshots/$name"
+          cp data/index/manifest.json "$SNAPSHOT_DIR/manifest.json"
+
+      - name: Restore the index from the snapshot (cache hit)
+        if: steps.index.outputs.cache-hit == 'true'
+        run: |
+          curl -sf -X POST "http://127.0.0.1:6333/collections/medleaf_chunks/snapshots/upload?priority=snapshot" \
+            -F "snapshot=@$SNAPSHOT_DIR/index.snapshot"
+          mkdir -p data/index
+          cp "$SNAPSHOT_DIR/manifest.json" data/index/manifest.json
+
+      - name: Retrieval eval on dev + Recall@5 gate
+        run: python -m medleaf.cli eval --split dev --baseline eval/baseline.json
+
+      - name: Upload the eval result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-dev
+          path: eval/results/*.json
+          if-no-files-found: ignore

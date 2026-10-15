@@ -8,6 +8,7 @@ never 200 with an empty list.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -15,7 +16,11 @@ from fastapi.testclient import TestClient
 
 from medleaf.api.app import create_app
 from medleaf.config import Settings
-from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
+from medleaf.retrieval.index import (
+    IndexIncompleteError,
+    IndexMissingError,
+    RetrievalUnavailableError,
+)
 from medleaf.retrieval.service import ReadyState, SearchHit, SearchResponse
 
 
@@ -62,6 +67,14 @@ class FakeService:
 
     def ready(self) -> ReadyState:
         return self._ready
+
+    def manifest(self) -> SimpleNamespace:
+        if self._search_error is not None:
+            raise self._search_error
+        return SimpleNamespace(
+            medicines=["xarelto", "eliquis"],
+            active_substances={"eliquis": "apixaban", "xarelto": None},
+        )
 
     def search(self, query: str, **kwargs: Any) -> SearchResponse:
         self.calls.append({"query": query, **kwargs})
@@ -149,6 +162,14 @@ def test_search_503_when_the_index_is_missing() -> None:
     assert response.json()["detail"]["error"] == "index_missing"
 
 
+def test_search_503_when_the_index_is_incomplete() -> None:
+    service = FakeService(search_error=IndexIncompleteError("804 points but 8797 recorded"))
+    with _client(service) as client:
+        response = client.post("/v1/search", json={"query": "nausea"})
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "index_incomplete"
+
+
 def test_search_503_when_retrieval_is_unavailable() -> None:
     service = FakeService(search_error=RetrievalUnavailableError("qdrant unavailable: refused"))
     with _client(service) as client:
@@ -168,3 +189,29 @@ def test_search_rejects_an_unknown_filter_value() -> None:
     with _client(FakeService()) as client:
         response = client.post("/v1/search", json={"query": "nausea", "lang": "fr"})
     assert response.status_code == 422
+
+
+def test_root_serves_the_search_page() -> None:
+    with _client(FakeService()) as client:
+        response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "/v1/search" in response.text
+
+
+def test_medicines_lists_the_indexed_slugs_sorted() -> None:
+    with _client(FakeService()) as client:
+        response = client.get("/v1/medicines")
+    assert response.status_code == 200
+    assert response.json() == [
+        {"slug": "eliquis", "active_substance": "apixaban"},
+        {"slug": "xarelto", "active_substance": None},
+    ]
+
+
+def test_medicines_503_without_an_index() -> None:
+    service = FakeService(search_error=IndexMissingError("index manifest missing"))
+    with _client(service) as client:
+        response = client.get("/v1/medicines")
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "index_missing"

@@ -13,7 +13,6 @@ from pathlib import Path
 import fitz
 import pytest
 
-from medleaf import parse as legacy_parse
 from medleaf.ingest import pipeline
 from medleaf.ingest.pdf import RawLine
 
@@ -206,16 +205,3 @@ def test_detector_skips_when_there_are_no_sections(
     assert result == []
     assert scanned == []
 
-
-def test_legacy_parser_detects_tables_once_per_requested_page(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """``medleaf.parse`` scrapes only the requested 4.8 pages, once each."""
-    pdf_path = _make_pdf(tmp_path, pages=3)
-    scanned = _count_calls(monkeypatch)
-    with fitz.open(pdf_path) as document:
-        rows_by_page, counts = legacy_parse._tables_for_pages(document, [2])
-
-    assert scanned == [2]
-    assert counts == {2: 0}
-    assert rows_by_page == {2: []}

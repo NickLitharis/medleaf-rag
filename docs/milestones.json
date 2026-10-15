@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated": "2026-10-15",
+  "updated": "2026-10-16",
   "notes": "Durable M1-M7 workflow ledger. Status reflects the SPEC section 16 acceptance, not effort spent. Each milestone gets a fresh agent and its own branch; update the matching entry (status/evidence/remaining_gates) in the same commit that advances it. Complete means the acceptance is genuinely met, not that sample checks pass.",
   "milestones": [
     {
@@ -47,13 +47,19 @@
     {
       "id": "M3",
       "name": "Eval dataset v1 + runner + retrieval gate",
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "Baseline recorded; a deliberately broken PR fails CI (S8)",
-      "evidence": [],
+      "evidence": [
+        "eval/splits.json: 16 train / 12 dev / 12 test medicines, stratified by therapeutic area; same-substance medicines share a split.",
+        "eval/datasets/retrieval-v1.jsonl: 126 hand-written questions (63 dev, 63 test; 32 EN / 31 EL per split) over 8 categories, incl. wrong-premise and not-in-corpus refusal cases. Gold IDs are section-level and every gold section is checked against data/parsed by tests/test_m3_eval.py.",
+        "Runner: `medleaf eval --split dev|test [--baseline FILE]` (src/medleaf/eval) scores Recall@5, Recall@10 and MRR@10 overall, per language and per category, and writes eval/results/<UTC>-<split>.json.",
+        "Baseline (eval/baseline.json, dev): Recall@5 48/57 (84.2%), Recall@10 49/57, MRR@10 0.62; EN 24/27, EL 24/30. Test: Recall@5 49/57 (86.0%), Recall@10 52/57, MRR@10 0.70.",
+        "Gate demonstrated locally: MEDLEAF_PREFETCH_LIMIT=3 -> 'GATE FAILED: Recall@5 dropped by 2 questions (48 -> 46 of 57); the gate allows 1', exit 1; default settings pass, exit 0.",
+        ".github/workflows/eval-retrieval.yml runs the dev eval and gate on every PR, restoring the index from a cached Qdrant snapshot (snapshot create/download/upload round trip verified locally: 8797 points restored)."
+      ],
       "remaining_gates": [
-        "Evaluation dataset v1 built",
-        "Runner records a baseline",
-        "CI gate fails a deliberately broken retrieval PR"
+        "CI gate fails a deliberately broken retrieval PR on GitHub (needs a push and a PR; first CI run builds the index on CPU)",
+        "MLflow logging and configs/best.yaml deferred to M5 (docs/decisions.md)"
       ]
     },
     {

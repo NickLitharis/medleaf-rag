@@ -2,23 +2,25 @@
 
 Bilingual (Greek / English) question answering over official EU medicine
 information, with cited answers and medical safety guardrails. The project is at
-milestone **M2**: the corpus covers 40 centrally authorised medicines in both
-languages and hybrid retrieval (dense + sparse) is served by `/v1/search`.
-Answer generation, the safety layer and evaluation are later milestones; see
-`SPEC.md`.
+milestone **M3**: the corpus covers 40 centrally authorised medicines in both
+languages, hybrid retrieval (dense + sparse) is served by `/v1/search`, and a
+retrieval evaluation set gates every PR. Answer generation and the safety layer
+are later milestones; see `SPEC.md`.
 
 ## Status
 
 - **M1 — download + parse for five medicines (EN + EL):** complete. Evidence in
   `docs/M1-acceptance.md`.
-- **M2 — 40 medicines, hybrid retrieval, `/v1/search`, Docker Compose:** code and corpus
-  are done and tested, but the **acceptance is not yet met**: the index serving the
-  queries was built before this milestone's chunking fix and `medleaf index
-  window-report` measures 727 of 2772 chunks over the model window, so only 5 of the 10
-  sample questions hit the right section. The measured gate, the root cause and the
-  exact rebuild steps are in `docs/M2-acceptance.md`; status in `docs/milestones.json`
-  is `in_progress`.
-- **M3–M7:** not started.
+- **M2 — 40 medicines, hybrid retrieval, `/v1/search`, Docker Compose:** complete.
+  The rebuilt index has 8797 chunks, none over the model window, and all ten sample
+  questions hit the expected section. Evidence in `docs/M2-acceptance.md`.
+- **M3 — eval dataset v1, runner, retrieval gate:** in progress. 126 questions over
+  dev/test medicines; dev baseline Recall@5 48/57 (84.2%), test 49/57 (86.0%).
+  `.github/workflows/eval-retrieval.yml` fails a PR that loses more than one Recall@5
+  hit. Still to show: the gate failing a real broken PR on GitHub. Run it locally with
+  `PYTHONPATH=src python -m medleaf.cli eval --split dev --baseline eval/baseline.json`.
+  Decisions in `docs/decisions.md`.
+- **M4–M7:** not started.
 
 ## Setup
 
@@ -92,7 +94,10 @@ curl "http://127.0.0.1:8000/v1/search?query=contraindications+of+Eliquis&lang=en
 
 Compose binds Qdrant and the API to loopback only, and the indexer runs as a one-shot
 profile so `docker compose up` never rebuilds the index by accident. `data/` is mounted
-from the host, so the corpus and the built index are not baked into images.
+from the host, so the corpus and the built index are not baked into images. Both
+`indexer` and `api` use `pull_policy: build`, so every `run`/`up` rebuilds the image
+from the current checkout first; a full index build fills a new collection and swaps
+the `medleaf_chunks` alias only when it finishes, so the API keeps serving meanwhile.
 
 ## Medical disclaimer
 

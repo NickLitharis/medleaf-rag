@@ -29,6 +29,8 @@ from medleaf.models import Lang, Medicine, Section
 from medleaf.retrieval.embed import Encoder
 from medleaf.retrieval.index import (
     IndexManifest,
+    alias_target,
+    build_collection_name,
     build_manifest,
     corpus_sha256,
     corpus_version_for,
@@ -37,6 +39,7 @@ from medleaf.retrieval.index import (
     load_manifest,
     medicine_metadata,
     missing_metadata,
+    point_alias,
     set_medicine_metadata,
     upsert_sections,
     write_manifest,
@@ -363,6 +366,10 @@ def build_index(
     points first, so chunk IDs from an older parse or an older chunking cannot linger
     next to the fresh ones. Embedding is per medicine, so a targeted rebuild re-embeds
     only the medicines it was asked for.
+
+    A full build (``recreate``) fills a new ``<collection>_<UTC stamp>`` collection and
+    then points the ``settings.qdrant_collection`` alias at it in one step; the previous
+    collection is dropped afterwards, and a failed build drops only its own collection.
     """
     all_medicines = load_medicines(settings.medicines_file)
     if not all_medicines:
@@ -389,45 +396,44 @@ def build_index(
 
     corpus_version = resolved_corpus_version(settings)
     dimension = encoder.dimension
+    served = settings.qdrant_collection
+    # A recreating build fills a fresh collection and only then moves the served alias
+    # onto it, so readers keep the previous index for the whole (long) embedding run.
+    target = build_collection_name(served) if recreate else served
     created = ensure_collection(
         client,
-        collection=settings.qdrant_collection,
+        collection=target,
         dense_dim=dimension,
         dense_vector_name=settings.dense_vector_name,
         sparse_vector_name=settings.sparse_vector_name,
-        recreate=recreate,
     )
     progress(
-        f"collection {settings.qdrant_collection!r} "
+        f"collection {target!r} "
         f"{'created' if created else 'reused'} (dense dim {dimension}, sparse IDF)"
     )
 
-    if only and not recreate:
-        for medicine in selected:
-            removed = delete_medicine_points(
-                client, collection=settings.qdrant_collection, slug=medicine.slug
-            )
-            progress(f"replaced {medicine.slug}: removed {removed} stale point(s)")
-
-    metadata = {medicine.slug: medicine_metadata(medicine) for medicine in selected}
-    chunk_counts: dict[str, int] = {}
-    batch_size = settings.embed_batch_size
-    for result in results:
-        for start in range(0, len(result.sections), batch_size):
-            batch = result.sections[start : start + batch_size]
-            vectors = encoder.encode_passages([section.text for section in batch])
-            upsert_sections(
-                client,
-                collection=settings.qdrant_collection,
-                sections=batch,
-                dense_vectors=vectors,
-                dense_vector_name=settings.dense_vector_name,
-                sparse_vector_name=settings.sparse_vector_name,
-                metadata=metadata,
-                wait=start + batch_size >= len(result.sections),
-            )
-        chunk_counts[result.key] = len(result.sections)
-        progress(f"indexed {result.key}: {len(result.sections)} chunks")
+    try:
+        chunk_counts = _embed_and_upsert(
+            settings=settings,
+            client=client,
+            encoder=encoder,
+            collection=target,
+            results=results,
+            selected=selected,
+            replace=bool(only) and not recreate,
+            progress=progress,
+        )
+        if recreate:
+            previous = point_alias(client, alias=served, collection=target)
+            progress(f"alias {served!r} -> {target!r}")
+            if previous is not None:
+                client.delete_collection(previous)
+                progress(f"dropped previous collection {previous!r}")
+    except BaseException:
+        if recreate and client.collection_exists(target) and alias_target(client, served) != target:
+            client.delete_collection(target)
+            progress(f"build failed; dropped unfinished collection {target!r}")
+        raise
 
     split_sections = split_section_counts(results)
     manifest = build_manifest(
@@ -460,6 +466,49 @@ def build_index(
         f"missing metadata={len(manifest.missing_metadata)}"
     )
     return manifest
+
+
+def _embed_and_upsert(
+    *,
+    settings: Settings,
+    client: QdrantClient,
+    encoder: Encoder,
+    collection: str,
+    results: Sequence[ParseResult],
+    selected: Sequence[Medicine],
+    replace: bool,
+    progress: Callable[[str], None],
+) -> dict[str, int]:
+    """Embed every parsed chunk into ``collection``; return chunk counts per pair.
+
+    ``replace`` (a targeted in-place rebuild) deletes the selected medicines' points
+    first, so chunk IDs from an older parse cannot linger next to the fresh ones.
+    """
+    if replace:
+        for medicine in selected:
+            removed = delete_medicine_points(client, collection=collection, slug=medicine.slug)
+            progress(f"replaced {medicine.slug}: removed {removed} stale point(s)")
+
+    metadata = {medicine.slug: medicine_metadata(medicine) for medicine in selected}
+    chunk_counts: dict[str, int] = {}
+    batch_size = settings.embed_batch_size
+    for result in results:
+        for start in range(0, len(result.sections), batch_size):
+            batch = result.sections[start : start + batch_size]
+            vectors = encoder.encode_passages([section.text for section in batch])
+            upsert_sections(
+                client,
+                collection=collection,
+                sections=batch,
+                dense_vectors=vectors,
+                dense_vector_name=settings.dense_vector_name,
+                sparse_vector_name=settings.sparse_vector_name,
+                metadata=metadata,
+                wait=start + batch_size >= len(result.sections),
+            )
+        chunk_counts[result.key] = len(result.sections)
+        progress(f"indexed {result.key}: {len(result.sections)} chunks")
+    return chunk_counts
 
 
 def annotate_manifest_metadata(

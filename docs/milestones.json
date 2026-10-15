@@ -6,18 +6,17 @@
     {
       "id": "M1",
       "name": "Repo skeleton, CI, download + parse for 5 medicines EN+EL",
-      "status": "partial",
+      "status": "complete",
       "acceptance": "Section-coverage tests pass; side-effect tables readable; licence wording confirmed",
       "evidence": [
         "10/10 corpus files resolved, downloaded, language-verified and sha256-pinned in data/medicines.yaml; SmPC 28/28 plus required leaflet sections present for all five medicines in EN and EL.",
         "Grid-table first-column frequency loss fixed: extract_tables_for_pages surfaces PyMuPDF page-span font weight per cell; bold first-column-only rows stay system-organ-class headings, regular ones become 'Reaction - <column 1 frequency>'. Verified on the real xarelto_en PDF (Eye haemorrhage - Common, Hypotension, haematoma - Common) and pinned by unit + corpus tests.",
         "Local: MEDLEAF_M1_CORPUS=1 MEDLEAF_SMOKE_PDF=data/raw/xarelto/xarelto_el.pdf PYTHONPATH=src python -m pytest -q -> 34 passed, 0 skipped; default offline run -> 21 passed, 13 skipped; 'ruff check .' clean.",
         ".github/workflows/ci.yml added: push/PR runs Ruff + fast tests only; the EMA corpus is an explicit manual workflow_dispatch opt-in that downloads the assets before running corpus tests, so CI never claims untested corpus coverage.",
-        "Official EMA legal notice and quoted terms recorded in docs/M1-acceptance.md; code is MIT while the corpus PDFs remain EMA copyright with attribution; no blanket legal or clinical clearance is claimed."
+        "Official EMA legal notice and quoted terms recorded in docs/M1-acceptance.md; code is MIT while the corpus PDFs remain EMA copyright with attribution; no blanket legal or clinical clearance is claimed.",
+        "GitHub Actions CI run 38748946549 on commit 8bdce22 is green: 'lint and fast tests (no corpus)' succeeded; the manual opt-in corpus job was skipped by design. https://github.com/NickLitharis/medleaf-rag/actions/runs/38748946549"
       ],
-      "remaining_gates": [
-        "Confirm the pushed GitHub Actions CI run (Ruff + fast tests) is green."
-      ]
+      "remaining_gates": []
     },
     {
       "id": "M2",

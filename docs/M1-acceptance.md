@@ -105,6 +105,14 @@ A second mutation check covers the new path: making `_cell_is_regular` return an
 unconditional `False` makes `test_grid_first_column_only_reaction_keeps_its_frequency`
 **fail**; restoring the code makes it pass.
 
+## CI
+
+`.github/workflows/ci.yml` installs `.[dev]`, runs `ruff check .` and the offline test
+suite on every push and pull request. The EMA corpus is an explicit manual
+`workflow_dispatch` opt-in that downloads the assets first, so CI never claims corpus
+coverage it did not exercise. Pushed run 38748946549 on commit `8bdce22` is **green**
+(`lint and fast tests` success; the corpus job skipped by design).
+
 ## Independent review
 
 The parent reviewer enabled both corpus and performance checks and ran the full suite:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -14,28 +13,21 @@ from medleaf.ingest.chunk import (
     extract_tables_for_pages,
 )
 from medleaf.ingest.pdf import (
-    SMPC_HEADING_RE,
     RawLine,
-    clean_line,
     extract_lines,
-    find_annex_boundaries,
-    normalize_heading_line,
+    first_copy_headings,
     rebuild_paragraphs,
     split_sections,
 )
 from medleaf.models import DocKind, Lang, Medicine, ParsedDocument, Section
-from medleaf.sections import SMPC_NUMBERS
 
 #: Bump when parsing or chunking changes in a way that alters Section output. It is part
 #: of the parse-cache key, so a stale cached parse can never be reused after a fix.
-PARSER_CACHE_VERSION = "medleaf-parser-2"
+PARSER_CACHE_VERSION = "medleaf-parser-3"
 
 #: SmPC sections whose pages can carry flattened side-effect tables (SPEC section 8).
 #: Table detection is the expensive part of parsing, so it runs only on these spans.
 TABLE_SECTIONS: tuple[str, ...] = ("4.8",)
-
-#: A dotted table-of-contents leader, e.g. ``4.1 Therapeutic indications .... 5``.
-_DOTTED_LEADER_RE = re.compile(r"\.{4,}\s*\d*$")
 
 
 def pdf_revision_date(pdf_path: str) -> str | None:
@@ -113,51 +105,29 @@ def parse_pdf(
     )
 
 
-def _smpc_annex_end(lines: list[RawLine]) -> int:
-    """Index where the SmPC (Annex I) ends: the first later annex marker, or EOF."""
-    boundaries = find_annex_boundaries(lines)
-    ends = [
-        boundaries[key]
-        for key in ("annex2", "annex3", "labelling", "leaflet")
-        if key in boundaries
-    ]
-    return min(ends) if ends else len(lines)
-
-
 def _section_spans(lines: list[RawLine], numbers: tuple[str, ...]) -> dict[str, tuple[int, int]]:
-    """Line-index spans for the given SmPC section numbers.
+    """Line-index spans for the given SmPC section numbers in the first document copy.
 
-    A span runs from the section's heading line to the line before the next SmPC
-    heading, and never past the end of Annex I. The span has a real end, so a page after
-    the last wanted heading is not silently attributed to it.
+    A span runs from the section's heading line to the line before the next accepted
+    SmPC heading, and never past the end of the first copy. Reusing
+    :func:`first_copy_headings` keeps table ownership inside the same copy the parser
+    indexed, so a repeated presentation's pages can never feed a table into the wrong
+    section.
     """
     wanted = set(numbers)
     if not wanted:
         return {}
-    smpc_end = _smpc_annex_end(lines)
-
-    headings: list[tuple[int, str]] = []
-    seen: set[str] = set()
-    for index in range(smpc_end):
-        text = normalize_heading_line(clean_line(lines[index].text))
-        if _DOTTED_LEADER_RE.search(text):
-            continue
-        match = SMPC_HEADING_RE.match(text)
-        if match is None:
-            continue
-        number = match.group("num")
-        if number not in SMPC_NUMBERS or number in seen:
-            continue
-        seen.add(number)
-        headings.append((index, number))
+    hits, copy_end = first_copy_headings(lines, doc=DocKind.SMPC)
 
     spans: dict[str, tuple[int, int]] = {}
-    for position, (index, number) in enumerate(headings):
-        if number not in wanted:
+    for position, hit in enumerate(hits):
+        if hit.key not in wanted:
             continue
-        end_index = headings[position + 1][0] - 1 if position + 1 < len(headings) else smpc_end - 1
-        if end_index >= index:
-            spans[number] = (index, end_index)
+        end_index = (
+            hits[position + 1].index - 1 if position + 1 < len(hits) else copy_end - 1
+        )
+        if end_index >= hit.index:
+            spans[hit.key] = (hit.index, end_index)
     return spans
 
 

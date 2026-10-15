@@ -46,7 +46,14 @@ from medleaf.retrieval.pipeline import (
     resolved_corpus_version,
 )
 from medleaf.retrieval.service import SearchHit, SearchResponse
-from medleaf.retrieval.text import fold_text, sparse_vector, token_id, tokenize
+from medleaf.retrieval.text import (
+    drop_terms,
+    fold_text,
+    query_sparse_vector,
+    sparse_vector,
+    token_id,
+    tokenize,
+)
 
 
 def _collapse(text: str) -> str:
@@ -98,6 +105,25 @@ def test_sparse_vector_uses_folded_tokens() -> None:
     assert accented.indices == plain.indices
     assert accented.values == plain.values
     assert accented.indices  # the Greek terms are genuinely present
+
+
+def test_query_sparse_vector_drops_function_words() -> None:
+    """A query keeps its rare content terms and loses function words."""
+    query = query_sparse_vector("What are the contraindications of Eliquis?")
+    keywords = {token_id(token) for token in ("contraindications", "eliquis")}
+    stop = {token_id(token) for token in ("what", "are", "the", "of")}
+    assert keywords <= set(query.indices)
+    assert not (stop & set(query.indices))
+    greek = query_sparse_vector("Ποιες είναι οι αντενδείξεις του Eliquis;")
+    assert token_id("αντενδειξεισ") in greek.indices
+    assert token_id("ποιες") not in greek.indices
+
+
+def test_drop_terms_removes_the_filter_redundant_medicine_name() -> None:
+    """The medicine already applied as a filter is not searched for again."""
+    assert drop_terms("What are the contraindications of Eliquis?", ["eliquis"]) == (
+        "What are the contraindications of"
+    )
 
 
 def test_token_id_is_stable_across_processes_not_builtin_hash() -> None:

@@ -40,7 +40,7 @@ _SMPC_EN: dict[str, tuple[str, ...]] = {
     "2": ("qualitative and quantitative composition",),
     "3": ("pharmaceutical form",),
     "4": ("clinical particulars",),
-    "4.1": ("therapeutic indications",),
+    "4.1": ("therapeutic indication",),
     "4.2": ("posology and method of administration",),
     "4.3": ("contraindications",),
     "4.4": ("special warnings and precautions for use",),
@@ -92,7 +92,7 @@ _SMPC_EL: dict[str, tuple[str, ...]] = {
     "6.1": ("καταλογος εκδοχων",),
     "6.2": ("ασυμβατοτητες",),
     "6.3": ("διαρκεια ζωης",),
-    "6.4": ("ιδιαιτερες προφυλαξεις κατα τη φυλαξη",),
+    "6.4": ("ιδιαιτερες προφυλαξεις κατα τη φυλαξη", "ιδιαιτερες προφυλαξεις κατα την φυλαξη"),
     "6.5": ("φυση και συστατικα του περιεκτη",),
     "6.6": ("ιδιαιτερες προφυλαξεις απορριψης",),
     "7": ("κατοχος της αδειας κυκλοφοριας",),
@@ -103,27 +103,26 @@ _SMPC_EL: dict[str, tuple[str, ...]] = {
 
 # Leaflet titles are product-specific, so matching uses a small set of phrases that
 # every EMA leaflet contains for each number, in both languages.
-_LEAFLET_EL_HINTS: tuple[str, ...] = (
-    "τι ειναι",
-    "τι πρεπει να γνωριζετε",
-    "πωσ να παρετε",
-    "πως να παρετε",
-    "να χρησιμοποιησετε",
-    "πωσ να χρησιμοποιησετε",
-    "πως να χρησιμοποιησετε",
-    "πιθανες ανεπιθυμητες ενεργειες",
-    "πωσ να φυλασσετε",
-    "πως να φυλασσετε",
-    "περιεχομενα τησ συσκευασιας",
-)
 _LEAFLET_EN_HINTS: tuple[str, ...] = (
     "what ",
     "what you need to know",
+    "how ",
     "how to take",
     "how to use",
     "possible side effects",
     "how to store",
     "contents of the pack",
+)
+_LEAFLET_EL_HINTS: tuple[str, ...] = (
+    "τι ειναι",
+    "τι πρεπει να γνωριζετε",
+    "πωσ",
+    "πως",
+    "να χρησιμοποιησετε",
+    "πιθανες ανεπιθυμητες ενεργειες",
+    "πωσ να φυλασσετε",
+    "πως να φυλασσετε",
+    "περιεχομενα τησ συσκευασιας",
 )
 
 

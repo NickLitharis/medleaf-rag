@@ -31,6 +31,24 @@ _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
 #: Bump when the tokenisation rules change, so the index manifest shows the difference.
 TOKENIZER_VERSION = "medleaf-tokenizer-1"
 
+#: Query-side function words. They carry no retrieval signal, and in a long chunk their
+#: raw term frequency can outrank the single rare content word that decides the answer
+#: (the sparse values are term frequencies; Qdrant's IDF cannot saturate them). The
+#: index keeps these tokens, so this is a query-only filter and needs no rebuild.
+STOPWORDS: frozenset[str] = frozenset(
+    {
+        "what", "are", "the", "of", "is", "for", "a", "an", "to", "in", "on",
+        "and", "or", "how", "does", "do", "with", "by", "at", "it", "this",
+        "that", "which", "from", "as", "was", "were", "be", "been", "being",
+        "have", "has", "had", "you", "your", "can", "should", "must", "may",
+        "who", "whom", "when", "where", "why",
+        # Greek
+        "ποιες", "ποιεσ", "ειναι", "οι", "του", "τησ", "των", "και", "να",
+        "το", "η", "ο", "σε", "με", "για", "που", "τι", "πωσ", "πως", "απο",
+        "δεν", "ενα", "μια", "τον", "την", "στο", "στη", "θα", "ποια", "ποιο",
+    }
+)
+
 
 def fold_text(text: str) -> str:
     """Lowercase and strip diacritics so inflected Greek forms share a token.
@@ -79,6 +97,34 @@ def sparse_vector(text: str) -> models.SparseVector:
     )
 
 
+def query_sparse_vector(text: str) -> models.SparseVector:
+    """Sparse vector for a user query, with function words removed.
+
+    The stored passages keep their function words; matching them from the query is what
+    is dropped here, so a long passage cannot win on ``the``/``of`` frequency alone.
+    """
+    counts = Counter[str](token for token in tokenize(text) if token not in STOPWORDS)
+    pairs = sorted((token_id(token), float(count)) for token, count in counts.items())
+    return models.SparseVector(
+        indices=[index for index, _ in pairs],
+        values=[value for _, value in pairs],
+    )
+
+
+def drop_terms(text: str, terms: Sequence[str]) -> str:
+    """Remove tokens already applied as an exact filter (e.g. the medicine name).
+
+    ``medleaf search --medicine eliquis`` already restricts retrieval to that medicine,
+    so the brand token only adds a signal every chunk shares; dropping it lets the
+    section words drive the query. The comparison is on folded text, so an accented or
+    capitalised spelling still matches.
+    """
+    dropped = {fold_text(term) for term in terms if term}
+    if not dropped:
+        return text
+    return " ".join(word for word in _WORD_RE.findall(text) if fold_text(word) not in dropped)
+
+
 def vocabulary_size(texts: Iterable[str]) -> int:
     """Distinct folded tokens across ``texts``; used in the index manifest."""
     tokens: set[str] = set()
@@ -94,9 +140,12 @@ def dedupe(values: Sequence[str]) -> list[str]:
 
 __all__ = [
     "MIN_TOKEN_LEN",
+    "STOPWORDS",
     "TOKENIZER_VERSION",
     "dedupe",
+    "drop_terms",
     "fold_text",
+    "query_sparse_vector",
     "sparse_pairs",
     "sparse_vector",
     "token_id",

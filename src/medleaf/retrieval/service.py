@@ -32,7 +32,7 @@ from medleaf.retrieval.index import (
     load_manifest,
     require_index,
 )
-from medleaf.retrieval.text import sparse_vector
+from medleaf.retrieval.text import drop_terms, query_sparse_vector
 
 
 class SearchHit(BaseModel):
@@ -209,7 +209,11 @@ class RetrievalService:
             require_index(self.client, collection=self.collection, corpus_version=version)
             encoder = self.encoder
             dense = encoder.encode_queries([query])[0]
-            sparse = sparse_vector(query)
+            # The sparse channel drops function words and the medicine already applied as
+            # a filter: raw term frequency would otherwise let a long chunk win on
+            # ``the``/brand-name repetition. The dense query keeps the full wording
+            # because the multilingual model uses the brand token semantically.
+            sparse = query_sparse_vector(drop_terms(query, medicine or []))
             hits = hybrid_search(
                 self.client,
                 collection=self.collection,

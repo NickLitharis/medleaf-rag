@@ -374,7 +374,14 @@ def build_sections(
     sections: list[Section] = []
     for number, title, text in raw_sections:
         body = text.strip()
-        parts = split_long_text(body, active) if body else [""]
+        # The passage the model sees carries the medicine, document kind, section number
+        # and title, so a question that names a section ("contraindications") can match
+        # the chunk lexically even though the printed heading itself is not in the body.
+        # Splitting measures this exact serialized text, so the added context can never
+        # push a chunk past the embedding window.
+        header = f"{medicine} {doc.value} {number} {title}".strip()
+        serialized = f"{header}\n{body}" if body else header
+        parts = split_long_text(serialized, active) if serialized else [""]
         total = len(parts)
         for index, part in enumerate(parts, start=1):
             sections.append(

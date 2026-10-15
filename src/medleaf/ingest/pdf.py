@@ -58,6 +58,12 @@ PAGE_NUMBER_RE = re.compile(r"^\s*\d{1,4}\s*$")
 PAGE_NUMBER_INLINE_RE = re.compile(r"^\s*\d{1,4}\s+(?=\S)")
 SOFT_HYPHEN_RE = re.compile(r"(\w)-\s*\n\s*(\w)")
 
+# A table of contents lists several section numbers a few lines apart. Body headings
+# are separated by the section text between them, so a run this tight and this long
+# (starting at the first section) is contents, not content.
+_CONTENTS_GAP_LINES = 2
+_CONTENTS_MIN_RUN = 4
+
 
 @dataclass(frozen=True)
 class RawLine:
@@ -67,6 +73,12 @@ class RawLine:
     y: float
     x: float
     page: int
+
+
+#: Two spans whose baselines are within this many points are one visual line. The
+#: SmPC number and its title are sometimes laid out on baselines ~1.6pt apart, so a
+#: tighter tolerance leaves the number stranded and rejects the heading.
+_BASELINE_TOLERANCE = 2.5
 
 
 def iter_lines(page: fitz.Page, page_number: int) -> Iterator[RawLine]:
@@ -94,7 +106,7 @@ def iter_lines(page: fitz.Page, page_number: int) -> Iterator[RawLine]:
     collected.sort(key=lambda item: (item.y, item.x))
     merged: list[RawLine] = []
     for item in collected:
-        if merged and abs(merged[-1].y - item.y) <= 1.5:
+        if merged and abs(merged[-1].y - item.y) <= _BASELINE_TOLERANCE:
             previous = merged[-1]
             merged[-1] = RawLine(
                 text=f"{previous.text} {item.text}".strip(),
@@ -177,8 +189,13 @@ def _scan_headings(
     pattern: re.Pattern[str],
     title_fn: object,
 ) -> list[HeadingHit]:
+    """All valid numbered headings in reading order, including repeated copies.
+
+    Duplicates are deliberately *not* dropped here: a repeated heading is how the next
+    copy of a multi-presentation document announces itself, and the caller uses that
+    to stop at the first complete copy.
+    """
     hits: list[HeadingHit] = []
-    seen: set[str] = set()
     for index in range(start, end):
         text = normalize_heading_line(clean_line(lines[index].text))
         if not text:
@@ -187,7 +204,7 @@ def _scan_headings(
         if not match:
             continue
         number = match.group("num")
-        if number not in numbers or number in seen:
+        if number not in numbers:
             continue
         title = match.group("title").strip()
         validate = title_fn  # callable(number, title) -> bool
@@ -195,9 +212,116 @@ def _scan_headings(
             continue
         if not validate(number, title):
             continue
-        seen.add(number)
         hits.append(HeadingHit(index=index, key=number, title=title))
     return hits
+
+
+def _order_map(numbers: tuple[str, ...]) -> dict[str, int]:
+    """Document order of each section number (``'10'`` sorts after ``'9'``)."""
+    return {number: index for index, number in enumerate(numbers)}
+
+
+def _keep_chain(chain: list[HeadingHit], order: dict[str, int]) -> list[HeadingHit]:
+    """Drop a tight run of headings that is a table of contents, not body text.
+
+    A leaflet prints its contents list as several section headings a line or two apart,
+    immediately followed by the real first heading. Body headings are separated by their
+    own text, so a tight run that starts at section ``1`` and holds four or more headings
+    is contents. When the real body's first heading is glued to the end of that run (the
+    run's last heading is section ``1`` again), that heading is kept; otherwise the whole
+    run is dropped and the body's own headings are picked up afterwards.
+    """
+    starts_early = order[chain[0].key] <= 1
+    if len(chain) >= _CONTENTS_MIN_RUN and starts_early:
+        if order[chain[-1].key] == 0:
+            return [chain[-1]]
+        return []
+    return chain
+
+
+def _drop_contents_runs(hits: list[HeadingHit], order: dict[str, int]) -> list[HeadingHit]:
+    """Remove contents-list runs, grouping headings that sit on adjacent lines."""
+    if not hits:
+        return []
+    kept: list[HeadingHit] = []
+    chain: list[HeadingHit] = [hits[0]]
+    for hit in hits[1:]:
+        if hit.index - chain[-1].index <= _CONTENTS_GAP_LINES:
+            chain.append(hit)
+        else:
+            kept.extend(_keep_chain(chain, order))
+            chain = [hit]
+    kept.extend(_keep_chain(chain, order))
+    return kept
+
+
+def _starts_new_copy(hits: list[HeadingHit], position: int, order: dict[str, int]) -> bool:
+    """True when this section ``1`` heading really restarts the document.
+
+    A numbered step in the body (``1. How to puncture the foil``) also matches the
+    section pattern. A real restart is followed by the next section numbers in order,
+    which an instruction step is not.
+    """
+    following = [order[hit.key] for hit in hits[position + 1 : position + 3]]
+    return following == [1, 2]
+
+
+def first_copy_headings(
+    lines: list[RawLine],
+    *,
+    doc: DocKind,
+) -> tuple[list[HeadingHit], int]:
+    """Headings of the first complete document copy, and where that copy ends.
+
+    EMA ships several complete SmPCs (one per presentation) inside one Annex I, and
+    several package leaflets after Annex III. Only the first copy is indexed: the later
+    copies repeat the same clinical sections and, if merged, make the last matched
+    heading (``10`` or leaflet ``6``) swallow the whole rest of the file.
+
+    Within one copy the section numbers strictly increase, so the first heading whose
+    number is not greater than the last accepted one starts the next copy and marks the
+    end of the first. If no later copy exists, the copy ends at the annex/first-annex
+    boundary (or EOF).
+    """
+    boundaries = find_annex_boundaries(lines)
+    if doc is DocKind.SMPC:
+        start = boundaries.get("annex1", 0)
+        ends = [
+            boundaries[key]
+            for key in ("annex2", "annex3", "labelling", "leaflet")
+            if key in boundaries
+        ]
+        hard_end = min([*ends, len(lines)])
+        numbers = SMPC_NUMBERS
+        pattern = SMPC_HEADING_RE
+        title_fn: object = smpc_title
+    else:
+        start = boundaries.get("leaflet", boundaries.get("annex3", 0))
+        hard_end = len(lines)
+        numbers = LEAFLET_NUMBERS
+        pattern = LEAFLET_HEADING_RE
+        title_fn = lambda number, title: looks_like_leaflet_heading(title)  # noqa: E731
+
+    order = _order_map(numbers)
+    scanned = _scan_headings(lines, start, hard_end, numbers, pattern, title_fn)
+    hits = _drop_contents_runs(scanned, order)
+
+    accepted: list[HeadingHit] = []
+    copy_end = hard_end
+    last_rank = -1
+    for position, hit in enumerate(hits):
+        rank = order[hit.key]
+        if accepted and rank <= last_rank:
+            if rank == 0 and _starts_new_copy(hits, position, order):
+                # A section 1 followed by 2 and 3 restarts the document: the first
+                # copy ends here and later copies are not indexed.
+                copy_end = hit.index
+                break
+            # A step numbered ``1.`` inside the body is not a restart; ignore it.
+            continue
+        accepted.append(hit)
+        last_rank = rank
+    return accepted, copy_end
 
 
 def split_sections(
@@ -210,31 +334,16 @@ def split_sections(
     Headings are matched by number, and accepted only when the following text looks
     like the expected title for that number in either corpus language. That check is
     what stops cross-references such as ``see section 4.8`` or table cells from being
-    mistaken for headings.
+    mistaken for headings. Only the first complete document copy is returned.
     """
-    boundaries = find_annex_boundaries(lines)
-    if doc is DocKind.SMPC:
-        start = boundaries.get("annex1", 0)
-        end = boundaries.get("annex2", len(lines))
-        numbers = SMPC_NUMBERS
-        pattern = SMPC_HEADING_RE
-        title_fn = smpc_title
-    else:
-        # The leaflet starts at Annex IIIB and runs to the end of the file.
-        start = boundaries.get("leaflet", boundaries.get("annex3", 0))
-        end = len(lines)
-        numbers = LEAFLET_NUMBERS
-        pattern = LEAFLET_HEADING_RE
-        title_fn = lambda number, title: looks_like_leaflet_heading(title)  # noqa: E731
-
-    hits = _scan_headings(lines, start, end, numbers, pattern, title_fn)
+    hits, copy_end = first_copy_headings(lines, doc=doc)
     if not hits:
         return []
 
     sections: list[tuple[str, str, str]] = []
     for position, hit in enumerate(hits):
         body_start = hit.index + 1
-        body_end = hits[position + 1].index if position + 1 < len(hits) else end
+        body_end = hits[position + 1].index if position + 1 < len(hits) else copy_end
         body_lines = [clean_line(line.text) for line in lines[body_start:body_end]]
         text = "\n".join(line for line in body_lines if line)
         sections.append((hit.key, hit.title, text))

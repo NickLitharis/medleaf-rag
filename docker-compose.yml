@@ -1,0 +1,59 @@
+services:
+  # Isolated retrieval store for the MedLeaf index. Bound to loopback only, and named so
+  # it cannot collide with unrelated containers on this machine.
+  qdrant:
+    image: qdrant/qdrant:v1.15.5
+    container_name: medleaf-qdrant
+    ports:
+      - "127.0.0.1:${MEDLEAF_QDRANT_HTTP_PORT:-6333}:6333"
+      - "127.0.0.1:${MEDLEAF_QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    restart: unless-stopped
+
+  # `docker compose run --rm indexer` builds the index once the corpus PDFs exist locally
+  # (data/raw is gitignored, so they are downloaded on the host first).
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medleaf-rag:local
+    profiles: ["index"]
+    command: ["python", "-m", "medleaf.cli", "index", "build"]
+    environment:
+      MEDLEAF_QDRANT_URL: http://qdrant:6333
+      MEDLEAF_DATA_DIR: /app/data
+      HF_HOME: /app/data/models
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - qdrant
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medleaf-rag:local
+    container_name: medleaf-api
+    command:
+      - uvicorn
+      - medleaf.api.app:create_app
+      - --factory
+      - --host
+      - "0.0.0.0"
+      - --port
+      - "8000"
+    ports:
+      - "127.0.0.1:${MEDLEAF_API_PORT:-8000}:8000"
+    environment:
+      MEDLEAF_QDRANT_URL: http://qdrant:6333
+      MEDLEAF_DATA_DIR: /app/data
+      HF_HOME: /app/data/models
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+
+volumes:
+  qdrant-storage:

@@ -73,6 +73,10 @@ class Section(BaseModel):
 
     The section ID is language-independent (SPEC section 8): the Greek and English
     versions of the same section share it, e.g. ``eliquis:smpc:4.5``.
+
+    ``active_substance`` and ``atc_code`` are manifest metadata, not document text, so
+    they are attached to the retrieval payload from the corpus manifest rather than
+    stored on the section; a chunk can then never carry an invented substance name.
     """
 
     chunk_id: str
@@ -85,6 +89,15 @@ class Section(BaseModel):
     source_url: str
     revision_date: str | None = None
     corpus_version: str | None = None
+    part: int = Field(
+        default=1,
+        ge=1,
+        description=(
+            "1-based part index when a section is longer than one embedding window. "
+            "Part 1 of 1 means the section was not split."
+        ),
+    )
+    parts_total: int = Field(default=1, ge=1)
 
     @property
     def token_estimate(self) -> int:

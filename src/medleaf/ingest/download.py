@@ -2,11 +2,17 @@
 
 The checksum rule from SPEC section 5: the repository stores a SHA-256 per file, so a
 mismatch means EMA published a new corpus version. That is reported, not raised.
+
+EMA rate-limits bursts (HTTP 429), so :func:`download_pdf` retries with exponential
+backoff and honours ``Retry-After``. The language re-check matters for the same reason
+it did in M1: a document can be served from the wrong locale path, and only the bytes
+prove which language arrived.
 """
 
 from __future__ import annotations
 
 import hashlib
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +20,12 @@ import httpx
 
 from medleaf.ingest.pdf import detect_language, extract_lines
 from medleaf.models import Lang, Medicine
+
+#: Status codes worth retrying; EMA returns 429 under burst load.
+RETRY_STATUS = frozenset({429, 500, 502, 503, 504})
+DEFAULT_MAX_ATTEMPTS = 4
+DEFAULT_BACKOFF_SECONDS = 2.0
+MAX_BACKOFF_SECONDS = 30.0
 
 
 @dataclass(frozen=True)
@@ -53,11 +65,18 @@ def download_pdf(
     destination: Path,
     expected_sha256: str | None = None,
     lang: Lang | None = None,
+    max_attempts: int = DEFAULT_MAX_ATTEMPTS,
+    backoff_seconds: float = DEFAULT_BACKOFF_SECONDS,
 ) -> DownloadResult:
-    """Download one PDF, verify its language when asked, and hash it."""
+    """Download one PDF, verify its language when asked, and hash it.
+
+    Retries throttled or transiently-failing responses; a persistent 4xx other than 429
+    is raised immediately, because retrying a wrong URL only wastes EMA's bandwidth.
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
-    response = client.get(url)
-    response.raise_for_status()
+    response = _get_with_retries(
+        client, url, max_attempts=max_attempts, backoff_seconds=backoff_seconds
+    )
     content_type = response.headers.get("content-type", "")
     if "pdf" not in content_type.lower():
         raise ValueError(
@@ -103,6 +122,46 @@ def download_pdf(
     return result
 
 
+def _get_with_retries(
+    client: httpx.Client,
+    url: str,
+    *,
+    max_attempts: int,
+    backoff_seconds: float,
+) -> httpx.Response:
+    """GET a URL, retrying throttled/transient responses with exponential backoff."""
+    for attempt in range(1, max_attempts + 1):
+        response: httpx.Response | None = None
+        try:
+            response = client.get(url)
+        except httpx.TransportError:  # timeouts, connection resets
+            if attempt == max_attempts:
+                raise
+        else:
+            if response.status_code not in RETRY_STATUS:
+                response.raise_for_status()
+                return response
+            if attempt == max_attempts:
+                response.raise_for_status()
+        delay = min(backoff_seconds * (2 ** (attempt - 1)), MAX_BACKOFF_SECONDS)
+        retry_after = _retry_after_seconds(None if response is None else response.headers)
+        time.sleep(retry_after if retry_after is not None else delay)
+    raise AssertionError("retry loop exhausted without returning or raising")  # pragma: no cover
+
+
+def _retry_after_seconds(headers: httpx.Headers | None) -> float | None:
+    """Read a numeric ``Retry-After`` when EMA sends one."""
+    if headers is None:
+        return None
+    raw = headers.get("retry-after")
+    if raw is None:
+        return None
+    try:
+        return min(float(raw), MAX_BACKOFF_SECONDS)
+    except ValueError:
+        return None
+
+
 def _detect_pdf_language(path: Path) -> Lang:
     """Detect a PDF's language from its first pages, using the same rule as the parser."""
     lines = extract_lines(str(path), max_pages=6)
@@ -127,3 +186,15 @@ def download_medicine(
             )
         )
     return results
+
+
+__all__ = [
+    "DEFAULT_BACKOFF_SECONDS",
+    "DEFAULT_MAX_ATTEMPTS",
+    "MAX_BACKOFF_SECONDS",
+    "RETRY_STATUS",
+    "DownloadResult",
+    "download_medicine",
+    "download_pdf",
+    "sha256_of",
+]

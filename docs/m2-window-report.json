@@ -1,0 +1,99 @@
+{
+  "collection": "medleaf_chunks",
+  "points": 2772,
+  "over_window": 727,
+  "clean": false,
+  "limit_tokens": 496,
+  "by_medicine": {
+    "humira": 20,
+    "jardiance": 16,
+    "tysabri": 19,
+    "herceptin": 25,
+    "dupixent": 16,
+    "lyrica": 21,
+    "victoza": 14,
+    "ocrevus": 18,
+    "pradaxa": 22,
+    "tecfidera": 19,
+    "rybelsus": 19,
+    "enbrel": 21,
+    "rinvoq": 23,
+    "lixiana": 17,
+    "imfinzi": 17,
+    "xarelto": 21,
+    "mounjaro": 17,
+    "nubeqa": 17,
+    "forxiga": 15,
+    "ozempic": 21,
+    "tagrisso": 19,
+    "cosentyx": 16,
+    "stelara": 21,
+    "kaftrio": 19,
+    "remicade": 20,
+    "brilique": 19,
+    "aimovig": 12,
+    "eliquis": 20,
+    "trulicity": 14,
+    "shingrix": 11,
+    "repatha": 13,
+    "entresto": 22,
+    "ibrance": 21,
+    "opdivo": 20,
+    "eylea": 19,
+    "comirnaty": 20,
+    "keytruda": 22,
+    "soliris": 16,
+    "praluent": 12,
+    "fasenra": 13
+  },
+  "worst": [
+    {
+      "chunk_id": "comirnaty:smpc:10",
+      "tokens": 164861
+    },
+    {
+      "chunk_id": "enbrel:smpc:10",
+      "tokens": 156079
+    },
+    {
+      "chunk_id": "xarelto:smpc:10",
+      "tokens": 145220
+    },
+    {
+      "chunk_id": "comirnaty:smpc:10",
+      "tokens": 124681
+    },
+    {
+      "chunk_id": "enbrel:smpc:10",
+      "tokens": 111205
+    },
+    {
+      "chunk_id": "opdivo:smpc:10",
+      "tokens": 106454
+    },
+    {
+      "chunk_id": "comirnaty:leaflet:6",
+      "tokens": 105065
+    },
+    {
+      "chunk_id": "xarelto:smpc:10",
+      "tokens": 103499
+    },
+    {
+      "chunk_id": "keytruda:smpc:4.7",
+      "tokens": 101383
+    },
+    {
+      "chunk_id": "pradaxa:smpc:10",
+      "tokens": 98494
+    },
+    {
+      "chunk_id": "humira:smpc:10",
+      "tokens": 98377
+    },
+    {
+      "chunk_id": "keytruda:smpc:10",
+      "tokens": 89873
+    }
+  ]
+}

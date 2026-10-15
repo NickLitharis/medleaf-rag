@@ -34,7 +34,9 @@ jobs:
 
   # The real EMA PDFs are not committed (data/raw/ is ignored), so the corpus is an
   # explicit, network-dependent opt-in. It is never run on push or pull_request, and
-  # this job downloads the assets before it can claim they passed.
+  # this job downloads the assets before it can claim they passed. The M2 index build
+  # is deliberately not run here: it needs torch and a Qdrant service, and is verified
+  # locally (see docs/M2-acceptance.md) rather than on every dispatch.
   corpus:
     name: EMA corpus acceptance (opt-in, network)
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_corpus }}
@@ -51,9 +53,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m medleaf.cli resolve Eliquis Humira Jardiance Ozempic Xarelto
-          python -m medleaf.cli download
-          python -m medleaf.cli check
+          python -m medleaf.cli resolve --continue-on-error \
+            $(grep -v '^#' data/corpus-request.txt | tr '\n' ' ')
+          python -m medleaf.cli download --workers 2
+          python -m medleaf.cli check --only eliquis humira jardiance ozempic xarelto
       - name: Corpus acceptance tests
         env:
           PYTHONPATH: src

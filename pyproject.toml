@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "Nikos Litharis" }]
 dependencies = [
+    "httpx>=0.27",
     "pydantic>=2.7",
     "pydantic-settings>=2.2",
     "PyMuPDF>=1.24",
@@ -14,12 +15,28 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Indexing is heavy (torch + transformers); the fast test suite does not need it.
+retrieval = [
+    "numpy>=1.26",
+    "qdrant-client>=1.12,<1.16",
+    "sentence-transformers>=3.0,<6",
+    "huggingface_hub>=0.23",
+]
+api = [
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+]
 dev = [
+    "fastapi>=0.110",
     "httpx>=0.27",
     "mypy>=1.10",
     "pytest>=8.2",
     "pytest-asyncio>=0.23",
+    "qdrant-client>=1.12,<1.16",
     "ruff>=0.5",
+]
+services = [
+    "medleaf-rag[api,retrieval]",
 ]
 
 [project.scripts]
@@ -37,6 +54,7 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [
     "network: test that downloads from ema.europa.eu (deselect with '-m \"not network\"')",
+    "qdrant: test that needs a real Qdrant service (deselect with '-m \"not qdrant\"')",
 ]
 
 [tool.ruff]

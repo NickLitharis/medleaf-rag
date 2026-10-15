@@ -7,11 +7,18 @@ SPEC section 8:
 * Side-effect tables become one line per row, e.g. ``Nausea - very common (>=1/10)``,
   and stay in the same chunk as their heading.
 * Chunk IDs are stable and language-independent: ``eliquis:smpc:4.5``.
+
+A chunk is never allowed to silently outgrow the embedding window. The index build
+passes the real e5 tokenizer as :class:`ChunkBudget.count_tokens`, so a long section is
+split at table-row, paragraph, sentence or word boundaries until every part fits the
+model window; the text is partitioned, never truncated.
 """
 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 import fitz  # PyMuPDF
@@ -53,29 +60,117 @@ def chunk_id(medicine: str, doc: DocKind, section: str) -> str:
     return f"{medicine}:{doc.value}:{section}"
 
 
-def split_long_text(text: str, max_tokens: int) -> list[str]:
-    """Split a long section at paragraph boundaries, keeping paragraphs intact.
+def word_count(text: str) -> int:
+    """Word-count budget, the original M1 behaviour and the default for non-embedding callers."""
+    return len(text.split())
 
-    A single paragraph longer than ``max_tokens`` is emitted whole rather than cut
-    mid-sentence: a truncated clinical statement is worse than a long chunk.
+
+def approximate_token_count(text: str) -> int:
+    """Deliberately conservative token estimate used only when no tokenizer is available.
+
+    Assumes at most two characters per token, which over-counts Latin text and matches
+    Greek closely, so it can only over-split — never let a chunk exceed the window. The
+    index build does not use this: it passes the real e5 tokenizer.
     """
-    paragraphs = [block.strip() for block in text.split("\n\n") if block.strip()]
-    if not paragraphs:
-        return []
+    return max(len(text.split()), (len(text) + 1) // 2)
 
-    chunks: list[str] = []
+
+@dataclass(frozen=True)
+class ChunkBudget:
+    """How many tokens a chunk may contain, and how that is measured.
+
+    ``reserve_tokens`` leaves room for the ``passage: `` prefix and the model's special
+    tokens. ``label`` is part of the parse-cache key: a cache built with a different
+    counter or window must be re-parsed rather than reused.
+    """
+
+    max_tokens: int = 512
+    reserve_tokens: int = 16
+    count_tokens: Callable[[str], int] = approximate_token_count
+    label: str = "approximate"
+
+    @property
+    def limit(self) -> int:
+        """Token budget one chunk part must stay within."""
+        return max(1, self.max_tokens - self.reserve_tokens)
+
+    def fits(self, text: str) -> bool:
+        """True when ``text`` fits the budget."""
+        return self.count_tokens(text) <= self.limit
+
+
+#: Sentence boundary: keeps the terminator with the sentence it closes.
+_SENTENCE_RE = re.compile(r"(?<=[.;:!?])\s+")
+
+
+def _word_windows(sentence: str, budget: ChunkBudget) -> list[str]:
+    """Last resort: split a single oversized sentence into whole-word windows.
+
+    A word longer than the whole budget is emitted on its own; splitting inside a word
+    would corrupt the clinical text.
+    """
+    windows: list[str] = []
     buffer: list[str] = []
-    count = 0
-    for paragraph in paragraphs:
-        length = len(paragraph.split())
-        if buffer and count + length > max_tokens:
-            chunks.append("\n\n".join(buffer))
-            buffer, count = [], 0
-        buffer.append(paragraph)
-        count += length
+    for word in sentence.split():
+        candidate = " ".join([*buffer, word])
+        if buffer and not budget.fits(candidate):
+            windows.append(" ".join(buffer))
+            buffer = [word]
+        else:
+            buffer.append(word)
     if buffer:
-        chunks.append("\n\n".join(buffer))
-    return chunks
+        windows.append(" ".join(buffer))
+    return windows
+
+
+def split_units(text: str, budget: ChunkBudget) -> list[str]:
+    """Split section text into the smallest units a chunk may be cut at.
+
+    Table rows (one line each in the flattened output) stay intact, then paragraphs,
+    then sentences, then whole words. Nothing is dropped: joining the units with a
+    newline and collapsing whitespace reproduces the original text.
+    """
+    units: list[str] = []
+    for block in text.split("\n\n"):
+        for raw_line in block.split("\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+            if budget.fits(line):
+                units.append(line)
+                continue
+            for raw_sentence in _SENTENCE_RE.split(line):
+                sentence = raw_sentence.strip()
+                if not sentence:
+                    continue
+                if budget.fits(sentence):
+                    units.append(sentence)
+                else:
+                    units.extend(_word_windows(sentence, budget))
+    return units
+
+
+def split_long_text(text: str, budget: ChunkBudget) -> list[str]:
+    """Pack a section into parts that each fit the budget.
+
+    Unlike the original word-count version, an oversized paragraph is no longer emitted
+    whole: it is split at sentence and word boundaries so the embedding model never has
+    to truncate clinical content silently.
+    """
+    units = split_units(text, budget)
+    if not units:
+        return []
+    parts: list[str] = []
+    buffer: list[str] = []
+    for unit in units:
+        if buffer and not budget.fits("\n".join([*buffer, unit])):
+            parts.append("\n".join(buffer))
+            buffer = [unit]
+        else:
+            buffer = [*buffer, unit]
+    if buffer:
+        parts.append("\n".join(buffer))
+    return parts
 
 
 def _is_frequency_label(cell: str) -> bool:
@@ -263,51 +358,43 @@ def build_sections(
     source_url: str,
     revision_date: str | None,
     corpus_version: str,
-    max_tokens: int,
+    max_tokens: int = 400,
+    budget: ChunkBudget | None = None,
 ) -> list[Section]:
     """Convert parser output into chunked :class:`Section` objects.
 
-    Sections longer than ``max_tokens`` produce numbered part IDs in the ``chunk_id``
+    Sections longer than the budget produce numbered part IDs in the ``chunk_id``
     (``4.5#2``) so IDs stay stable and unique. ``Section.section`` stays the base
     number (``4.5``) so section coverage is measured per document section, not per part.
+
+    ``budget`` wins over ``max_tokens``; ``max_tokens`` is the word-count fallback used
+    by callers that do not embed (and by the M1 tests).
     """
+    active = budget or ChunkBudget(max_tokens=max_tokens, count_tokens=word_count, label="words")
     sections: list[Section] = []
     for number, title, text in raw_sections:
         body = text.strip()
-        if not body:
-            # Keep the section so coverage and citation lookups still resolve; an empty
-            # body is honest about a heading with no text under it.
-            body = ""
-        parts = split_long_text(body, max_tokens) if body else [""]
-        if len(parts) == 1:
-            sections.append(
-                Section(
-                    chunk_id=chunk_id(medicine, doc, number),
-                    medicine=medicine,
-                    lang=lang,
-                    doc=doc,
-                    section=number,
-                    title=title,
-                    text=body,
-                    source_url=source_url,
-                    revision_date=revision_date,
-                    corpus_version=corpus_version,
-                )
-            )
-            continue
+        parts = split_long_text(body, active) if body else [""]
+        total = len(parts)
         for index, part in enumerate(parts, start=1):
             sections.append(
                 Section(
-                    chunk_id=f"{chunk_id(medicine, doc, number)}#{index}",
+                    chunk_id=(
+                        chunk_id(medicine, doc, number)
+                        if total == 1
+                        else f"{chunk_id(medicine, doc, number)}#{index}"
+                    ),
                     medicine=medicine,
                     lang=lang,
                     doc=doc,
                     section=number,
-                    title=f"{title} (part {index})",
+                    title=title if total == 1 else f"{title} (part {index})",
                     text=part,
                     source_url=source_url,
                     revision_date=revision_date,
                     corpus_version=corpus_version,
+                    part=index,
+                    parts_total=total,
                 )
             )
     return sections

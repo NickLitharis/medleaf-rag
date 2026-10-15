@@ -98,3 +98,633 @@ medicines:
       url: https://www.ema.europa.eu/el/documents/product-information/xarelto-epar-product-information_el.pdf
       sha256: ae1220c9504ca1809ff2f8b66b7786ec35601a04660912bb3cfd292bf636d8ef
       revision_date: '2026-09-22'
+- slug: forxiga
+  name: Forxiga
+  active_substance: dapagliflozin
+  atc_code: A10BK01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/forxiga
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/forxiga-epar-product-information_en.pdf
+      sha256: a32f3f48ad3ffeffd85467179c7cd7d2f4f8e65c471ebf5e9fcd92a61c71299a
+      revision_date: '2026-06-11'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/forxiga-epar-product-information_el.pdf
+      sha256: 79290d91427dc8beff3729c1a0fefd1fd9e645a44d152ab1b17ae446f0a5ec19
+      revision_date: '2026-06-11'
+- slug: trulicity
+  name: Trulicity
+  active_substance: dulaglutide
+  atc_code: A10BJ05
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/trulicity
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/trulicity-epar-product-information_en.pdf
+      sha256: 8f7c34e4753bded4db7c0494f49b503f91f5736e3b7e360143648c1ad38b32e3
+      revision_date: '2026-01-30'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/trulicity-epar-product-information_el.pdf
+      sha256: 23f86532fd099643a8204826973cf41868c65bcf82f9e619ab9d4810947b671e
+      revision_date: '2026-01-30'
+- slug: rybelsus
+  name: Rybelsus
+  active_substance: semaglutide
+  atc_code: A10BJ06
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/rybelsus
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/rybelsus-epar-product-information_en.pdf
+      sha256: 92f8cd4bbfc5e1b56bb6383ebaaeb7f5b41beee2ff07448d020f2af2ee2b7172
+      revision_date: '2026-04-22'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/rybelsus-epar-product-information_el.pdf
+      sha256: aa5dfee3f8a99257e70335cda5cdb13887a8b084cf6733add8d87ff1138fecdc
+      revision_date: '2026-04-22'
+- slug: mounjaro
+  name: Mounjaro
+  active_substance: tirzepatide
+  atc_code: A10BX16
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/mounjaro
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/mounjaro-epar-product-information_en.pdf
+      sha256: 8d75eff2f10bd886e04a9cae39b5a53d6eea8dc5f9d2d23738f4b6def2646875
+      revision_date: '2026-10-08'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/mounjaro-epar-product-information_el.pdf
+      sha256: daf3d42fcaab7901195db11a960c77525a9b07c40c3699e9fe214ea6ce36ebd3
+      revision_date: '2026-10-08'
+- slug: victoza
+  name: Victoza
+  active_substance: liraglutide
+  atc_code: A10BJ02
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/victoza
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/victoza-epar-product-information_en.pdf
+      sha256: e9b0ef93af536558ec062a58bf0afc64c1e247ace94f64a0d81dac7380968a14
+      revision_date: '2026-01-16'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/victoza-epar-product-information_el.pdf
+      sha256: d18d97deedd27eab783dff7628a95a6042a420a89ee8773de239cff5e0ebdff6
+      revision_date: '2026-01-16'
+- slug: pradaxa
+  name: Pradaxa
+  active_substance: dabigatran etexilate
+  atc_code: B01AE07
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/pradaxa
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/pradaxa-epar-product-information_en.pdf
+      sha256: 6fdebd4ffab4d65c0f88f2d9fedf86e816358c723b5b8edac8e90f1c47487499
+      revision_date: '2026-03-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/pradaxa-epar-product-information_el.pdf
+      sha256: 870dbdfc85c7de8e4c559dd7319907ec7ca672c2e73cbe9ed7ae6c9d60b06adf
+      revision_date: '2026-03-13'
+- slug: lixiana
+  name: Lixiana
+  active_substance: edoxaban
+  atc_code: B01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/lixiana
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/lixiana-epar-product-information_en.pdf
+      sha256: 5fd1fde6f72bf5d3892ddc2d35b116dd396f6657ffdfad7faca24bdcd927d334
+      revision_date: '2026-04-20'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/lixiana-epar-product-information_el.pdf
+      sha256: b3536671715d88ca7e5d9e03031fcd906f11b1adf7324b325cc0e9e3773322f3
+      revision_date: '2026-04-20'
+- slug: entresto
+  name: Entresto
+  active_substance: sacubitril;valsartan
+  atc_code: C09DX04
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/entresto
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/entresto-epar-product-information_en.pdf
+      sha256: 63effd0dd78bf1b11f8cfe5ae77efc68b2653de13ba467bbf4e48289e340b97e
+      revision_date: '2026-01-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/entresto-epar-product-information_el.pdf
+      sha256: 9aa59e14239fb8a3e7b22921001f56ff7ed350b82a19028ea6e7a963f1b3f360
+      revision_date: '2026-01-13'
+- slug: brilique
+  name: Brilique
+  active_substance: ticagrelor
+  atc_code: B01AC24
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/brilique
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/brilique-epar-product-information_en.pdf
+      sha256: f815638059a70571d33a6ddc4107523f2ae567aafc2b20551ad4a9b0fb2f2aca
+      revision_date: '2026-08-18'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/brilique-epar-product-information_el.pdf
+      sha256: 602c513429853c3abfefce4895f598fbed8706268f1bdbf270903f9608e94535
+      revision_date: '2026-08-18'
+- slug: repatha
+  name: Repatha
+  active_substance: evolocumab
+  atc_code: C10AX13
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/repatha
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/repatha-epar-product-information_en.pdf
+      sha256: d2505aa52199753458c8b299a339c2c3d9d330c34201edb39c0bf49997f26fba
+      revision_date: '2026-09-04'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/repatha-epar-product-information_el.pdf
+      sha256: 10ca0a90249dbc757e0c2da7e39d2ac1c746fe61ae15fe6cd2ee79d9550bc3c7
+      revision_date: '2026-09-04'
+- slug: praluent
+  name: Praluent
+  active_substance: alirocumab
+  atc_code: C10AX14
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/praluent
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/praluent-epar-product-information_en.pdf
+      sha256: 6f3a557966433735403c271f4c209bc5a5dfed09df157b3e3075babd7406462f
+      revision_date: '2026-01-09'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/praluent-epar-product-information_el.pdf
+      sha256: 7f90a7646b750611d24eba2b4486e0f7d48de1400049ca0734d2bf77c1a4e964
+      revision_date: '2026-01-09'
+- slug: lyrica
+  name: Lyrica
+  active_substance: pregabalin
+  atc_code: N02BF02
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/lyrica
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/lyrica-epar-product-information_en.pdf
+      sha256: b911bddbab432f8a0fcedb9c67537bff55e0bf53d314c31c88869bca834605af
+      revision_date: '2026-10-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/lyrica-epar-product-information_el.pdf
+      sha256: 14600bfc30cc794a2533be8a3bfe04663fdfb9607ccee0eed3a53de9eb773b0c
+      revision_date: '2026-10-13'
+- slug: aimovig
+  name: Aimovig
+  active_substance: erenumab
+  atc_code: N02CD01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/aimovig
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/aimovig-epar-product-information_en.pdf
+      sha256: 3eca639638392984c39621d5f5973e846e56d13ded09a7d8628d6a71c4e0ca87
+      revision_date: '2026-10-05'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/aimovig-epar-product-information_el.pdf
+      sha256: ee88f0cd78e75c0dadc54bb9364132b2988f42816681d4f2cfd42651462ab404
+      revision_date: '2026-10-05'
+- slug: tecfidera
+  name: Tecfidera
+  active_substance: dimethyl fumarate
+  atc_code: L04AX07
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/tecfidera
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/tecfidera-epar-product-information_en.pdf
+      sha256: c529e0432acf9767ce48e42408ea2f72e957004be1c6f8e00714d8bd22b2a5fe
+      revision_date: '2026-08-11'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/tecfidera-epar-product-information_el.pdf
+      sha256: 3b8236bb87f971226bd5061be0896bef46fb835e3487b186b5e7157510f5578e
+      revision_date: '2026-08-11'
+- slug: ocrevus
+  name: Ocrevus
+  active_substance: ocrelizumab
+  atc_code: L04AG08
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/ocrevus
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/ocrevus-epar-product-information_en.pdf
+      sha256: 6b0d6110438994b797b8a98f00722dd926d4ce7ddf6922009fcf45cecda87372
+      revision_date: '2026-08-20'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/ocrevus-epar-product-information_el.pdf
+      sha256: 28a54abce839687da7430bc9e9bea0c917542bc70c485064c24eb7721880e50a
+      revision_date: '2026-08-20'
+- slug: tysabri
+  name: Tysabri
+  active_substance: natalizumab
+  atc_code: L04AG03
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/tysabri
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/tysabri-epar-product-information_en.pdf
+      sha256: 314c2bb2f9d46474af7df870f22ba3acb26afe4b9c18370e544b150b15ab0b88
+      revision_date: '2026-07-06'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/tysabri-epar-product-information_el.pdf
+      sha256: de95da09d03b5cfb6e222a93fa714f05102a93af869e0951f263586cf0a672ff
+      revision_date: '2026-07-06'
+- slug: enbrel
+  name: Enbrel
+  active_substance: etanercept
+  atc_code: L04AB01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/enbrel
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/enbrel-epar-product-information_en.pdf
+      sha256: 2c6500390fb2c4d6c023708f4ad5e87e0680d81ce838cfcbebc32899e1a4b8e3
+      revision_date: '2025-08-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/enbrel-epar-product-information_el.pdf
+      sha256: d7ccb17b8ba5097fd46e5e1fcf856c4a6d443cf48b04dc725fcaf7420016905c
+      revision_date: '2025-08-13'
+- slug: remicade
+  name: Remicade
+  active_substance: infliximab
+  atc_code: L04AB02
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/remicade
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/remicade-epar-product-information_en.pdf
+      sha256: 3fe5ec643ebd8b47f3d2adf8a19ade1224c614e70c07c2d563b0cf68054693ab
+      revision_date: '2025-12-15'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/remicade-epar-product-information_el.pdf
+      sha256: 72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e
+      revision_date: '2025-12-15'
+- slug: stelara
+  name: Stelara
+  active_substance: ustekinumab
+  atc_code: L04AC05
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/stelara
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/stelara-epar-product-information_en.pdf
+      sha256: 6a0c49632e19ff1155ec52b57eff985c2b5fe19c1a8b9a5771ebf66d9d2755b7
+      revision_date: '2026-08-18'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/stelara-epar-product-information_el.pdf
+      sha256: 727fcf94515628736404adcbc60138c7cd31a73762b486227f2cea25e9ac15f0
+      revision_date: '2026-08-18'
+- slug: cosentyx
+  name: Cosentyx
+  active_substance: secukinumab
+  atc_code: L04AC10
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/cosentyx
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/cosentyx-epar-product-information_en.pdf
+      sha256: 9805442cdc9f2a4b685938f7d2dfa3a9cb4950b0a1530b28d19e3354de66e2ee
+      revision_date: '2025-12-18'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/cosentyx-epar-product-information_el.pdf
+      sha256: cb85dbb2c1d534f67da01a04712081bdcdd4b02a993bf84af4a5e11c690d842f
+      revision_date: '2025-12-18'
+- slug: dupixent
+  name: Dupixent
+  active_substance: dupilumab
+  atc_code: D11AH05
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/dupixent
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/dupixent-epar-product-information_en.pdf
+      sha256: 03cfef0820960157937161ad51a96760d9bff76c2f23c8cca9d5128db312db79
+      revision_date: '2026-08-18'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/dupixent-epar-product-information_el.pdf
+      sha256: 8636ffc3e7b8da6c2e74348f89a4bd97765a136ea3df4c91ba2736268ffaf85e
+      revision_date: '2026-08-18'
+- slug: rinvoq
+  name: Rinvoq
+  active_substance: upadacitinib
+  atc_code: L04AA44
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/rinvoq
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/rinvoq-epar-product-information_en.pdf
+      sha256: 5de239efd759454fb94dd5492aaf011cbc6b7e353af434d7085ca61eb8be1f59
+      revision_date: '2026-10-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/rinvoq-epar-product-information_el.pdf
+      sha256: 61d19bd84077dd891f6e551f69ed036af2b2b42c41e9b55ede80cef02e511dae
+      revision_date: '2026-10-13'
+- slug: keytruda
+  name: Keytruda
+  active_substance: pembrolizumab
+  atc_code: L01FF02
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/keytruda
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/keytruda-epar-product-information_en.pdf
+      sha256: e087d75948ee6d7e0436cc4d9426ed91824e992a89f4481a4ea0ddb3e3ee3588
+      revision_date: '2026-09-03'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/keytruda-epar-product-information_el.pdf
+      sha256: c0dad12566a5733bd8fd203f3d8b9442e4e30e4058f4e3ef05263fb963bdfebb
+      revision_date: '2026-09-03'
+- slug: opdivo
+  name: Opdivo
+  active_substance: nivolumab
+  atc_code: L01FF01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/opdivo
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/opdivo-epar-product-information_en.pdf
+      sha256: 1ce21ede7b3b9a8abc396626f301d2db3510ede7261a38fc34a275e7a180f454
+      revision_date: '2026-08-19'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/opdivo-epar-product-information_el.pdf
+      sha256: 8bae623c95910c1f6c3145f4e29b5ff36241dc2b9015e0c09fbf8f89a72ef842
+      revision_date: '2026-08-19'
+- slug: imfinzi
+  name: Imfinzi
+  active_substance: durvalumab
+  atc_code: L01XC28
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/imfinzi
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/imfinzi-epar-product-information_en.pdf
+      sha256: 2aea150cfee5fbe605596424a5c30efdb4cdb269005b61f75a72ebb78beb905f
+      revision_date: '2026-10-13'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/imfinzi-epar-product-information_el.pdf
+      sha256: 9fb89ba64d1c27439c53dcdeeac31498e3e30f3556bd86e9e5ed4dafbcb0ed61
+      revision_date: '2026-10-13'
+- slug: herceptin
+  name: Herceptin
+  active_substance: trastuzumab
+  atc_code: L01FD01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/herceptin
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/herceptin-epar-product-information_en.pdf
+      sha256: 4737cd7c26cd2805fc40be61983542b3a3127abbce7e3ca6ebc3b5c0895dda53
+      revision_date: '2026-03-02'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/herceptin-epar-product-information_el.pdf
+      sha256: f27c5f82745aff8ee318fbb0faac96f6ec1333212d22026f6f9dd56cc5a01e3b
+      revision_date: '2026-03-02'
+- slug: tagrisso
+  name: Tagrisso
+  active_substance: osimertinib
+  atc_code: L01XE
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/tagrisso
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/tagrisso-epar-product-information_en.pdf
+      sha256: 36d1f10f3b323cac93ed4124915e050ad98541d8f140829a41c0c4e0ad3343cb
+      revision_date: '2026-09-10'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/tagrisso-epar-product-information_el.pdf
+      sha256: d1d1a9913bf56d8bf32fe0e1f35d812fdc03ea656729da31bd4a258b30ddd1f9
+      revision_date: '2026-09-10'
+- slug: comirnaty
+  name: Comirnaty
+  active_substance: COVID-19 mRNA vaccine
+  atc_code: J07BN01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/comirnaty
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/comirnaty-epar-product-information_en.pdf
+      sha256: 6b1fcd6e0ff3b5c1ffd59f9dd3286f1609cca5902765a0cf59830512428fefdc
+      revision_date: '2026-09-30'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/comirnaty-epar-product-information_el.pdf
+      sha256: 2b8bd8514d3a7c3c3fda83221b1392db731ef21b2e5e7f3e64b6f045eb053419
+      revision_date: '2026-09-30'
+- slug: shingrix
+  name: Shingrix
+  active_substance: herpes zoster vaccine (recombinant, adjuvanted)
+  atc_code: J07BK03
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/shingrix
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/shingrix-epar-product-information_en.pdf
+      sha256: 1f3ecb07618726e6047021e1161476fe0b321e028489906ca0c1152545983723
+      revision_date: '2026-03-23'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/shingrix-epar-product-information_el.pdf
+      sha256: b03b1ed6829e958c44ecec3a0d5469f41a8e0db4a9e51581ee81377b73ce4a80
+      revision_date: '2026-03-23'
+- slug: kaftrio
+  name: Kaftrio
+  active_substance: ivacaftor;tezacaftor;elexacaftor
+  atc_code: R07AX32
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/kaftrio
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/kaftrio-epar-product-information_en.pdf
+      sha256: 04121cac1535ad5982d6257c33a1777a08c5914a9fce488aee1208cd9e01ad69
+      revision_date: '2026-08-19'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/kaftrio-epar-product-information_el.pdf
+      sha256: 5cd93f4cfc5b0cc8d1051703ab4d200f2465f97b7c40b1d5c599377463c13fa8
+      revision_date: '2026-08-19'
+- slug: eylea
+  name: Eylea
+  active_substance: aflibercept
+  atc_code: S01LA05
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/eylea
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/eylea-epar-product-information_en.pdf
+      sha256: 0ea748a90f59c54b29e10d35af90b5ab612512144c4ee3cdaf4e5635c390f90f
+      revision_date: '2026-08-21'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/eylea-epar-product-information_el.pdf
+      sha256: 37b43c971135454d3af22a521a15741a0afdd844aaa6d757a8bd36cd0e0fded4
+      revision_date: '2026-08-21'
+- slug: soliris
+  name: Soliris
+  active_substance: eculizumab
+  atc_code: L04AA25
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/soliris
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/soliris-epar-product-information_en.pdf
+      sha256: b254b201b05164093aea1fcfce38f32747566e49a27d2950669846f9482cafae
+      revision_date: '2026-02-19'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/soliris-epar-product-information_el.pdf
+      sha256: 9bac881c140c7596f1f902b5ac2f9a8b77e0f687bd3696c902fd33747836931b
+      revision_date: '2026-02-19'
+- slug: ibrance
+  name: Ibrance
+  active_substance: palbociclib
+  atc_code: L01EF01
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/ibrance
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/ibrance-epar-product-information_en.pdf
+      sha256: 73a98bcaed2e5b347266ff9f037099270b545348fdf729a2479eedc3e06fd319
+      revision_date: '2026-05-19'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/ibrance-epar-product-information_el.pdf
+      sha256: 2d1f304fcd4a39d495439b7387ac5ad4652f6ca77a4bbb530d342cda4ea62315
+      revision_date: '2026-05-19'
+- slug: fasenra
+  name: Fasenra
+  active_substance: benralizumab
+  atc_code: R03DX10
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/fasenra
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/fasenra-epar-product-information_en.pdf
+      sha256: 8070efdc9061595e18e2da441d614f24a1c6be223c37b11d72fb87b51731079e
+      revision_date: '2026-09-14'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/fasenra-epar-product-information_el.pdf
+      sha256: f3596f11ce80280e86eabac9f56df01b6a1cbfad614e35469236bed8c63f6c88
+      revision_date: '2026-09-14'
+- slug: nubeqa
+  name: Nubeqa
+  active_substance: darolutamide
+  atc_code: L02BB
+  epar_url: https://www.ema.europa.eu/en/medicines/human/EPAR/nubeqa
+  name_el: null
+  active_substance_el: null
+  documents:
+    en:
+      lang: en
+      url: https://www.ema.europa.eu/en/documents/product-information/nubeqa-epar-product-information_en.pdf
+      sha256: da13d7ad15d93e78a0008f5eb25e09dc0942552321540cdc62987578c964dccb
+      revision_date: '2025-08-29'
+    el:
+      lang: el
+      url: https://www.ema.europa.eu/el/documents/product-information/nubeqa-epar-product-information_el.pdf
+      sha256: b30028a870b21768a676dd5b88c1193e8a8a8fe0f27fc511be27328a3741cf0d
+      revision_date: '2025-08-29'

@@ -31,3 +31,9 @@ eval/results/
 Desktop.ini
 .vscode/
 .idea/
+
+# Derived artifacts (rebuilt from data/medicines.yaml + data/raw)
+data/parsed/
+data/index/
+data/cache/
+data/models/

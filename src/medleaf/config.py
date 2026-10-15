@@ -27,12 +27,37 @@ class Settings(BaseSettings):
 
     data_dir: Path = Field(default=PROJECT_ROOT / "data")
     configs_dir: Path = Field(default=PROJECT_ROOT / "configs")
-    corpus_version: str = Field(default="dev")
+    corpus_version: str = Field(
+        default="dev",
+        description=(
+            "Corpus version stamped on chunks. `medleaf index build` replaces the "
+            "default with a hash of data/medicines.yaml so retrieval filters match "
+            "the indexed corpus exactly."
+        ),
+    )
     user_agent: str = Field(
         default="medleaf-rag/0.1 (+https://github.com/NickLitharis/medleaf-rag)"
     )
     request_timeout_s: float = Field(default=60.0)
     max_section_tokens: int = Field(default=400)
+
+    # --- Retrieval (M2). Dense e5 vectors plus Qdrant sparse IDF vectors. ---
+    embed_model: str = Field(default="intfloat/multilingual-e5-base")
+    embed_revision: str = Field(
+        default="d128750597153bb5987e10b1c3493a34e5a4502a",
+        description="Pinned Hugging Face commit; the index manifest records what ran.",
+    )
+    embed_device: str = Field(default="cpu")
+    embed_batch_size: int = Field(default=32)
+    embed_max_seq_length: int = Field(default=512)
+    embed_cache_dir: Path = Field(default=PROJECT_ROOT / "data" / "models")
+    qdrant_url: str = Field(default="http://127.0.0.1:6333")
+    qdrant_api_key: str | None = Field(default=None)
+    qdrant_collection: str = Field(default="medleaf_chunks")
+    dense_vector_name: str = Field(default="dense")
+    sparse_vector_name: str = Field(default="sparse")
+    prefetch_limit: int = Field(default=30)
+    default_limit: int = Field(default=10)
 
     def pdf_path(self, slug: str, lang: str) -> Path:
         """Path of one downloaded PDF, matching ``ingest.download.download_medicine``."""
@@ -47,6 +72,20 @@ class Settings(BaseSettings):
     def parsed_dir(self) -> Path:
         """Directory holding parsed chunk JSONL."""
         return self.data_dir / "parsed"
+
+    @property
+    def index_dir(self) -> Path:
+        """Directory holding the built-index manifest."""
+        return self.data_dir / "index"
+
+    @property
+    def index_manifest_file(self) -> Path:
+        """Manifest describing the built Qdrant index."""
+        return self.index_dir / "manifest.json"
+
+    def parsed_path(self, slug: str, lang: str) -> Path:
+        """Cache path for one parsed PDF, matching ``retrieval.pipeline``."""
+        return self.parsed_dir / f"{slug}_{lang}.jsonl"
 
     @property
     def medicines_file(self) -> Path:

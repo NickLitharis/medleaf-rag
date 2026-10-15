@@ -16,9 +16,12 @@ locale prefix from the page, and the downloader re-checks the detected language.
 
 from __future__ import annotations
 
+import hashlib
 import re
 import sys
+import time
 from dataclasses import dataclass
+from pathlib import Path
 
 import httpx
 
@@ -70,6 +73,78 @@ def build_client(*, user_agent: str, timeout: float = 60.0) -> httpx.Client:
         timeout=timeout,
         follow_redirects=True,
     )
+
+
+#: How long a cached EMA response stays usable. The corpus is republished rarely.
+CACHE_TTL_SECONDS = 24 * 60 * 60
+
+
+def cache_path(cache_dir: Path, url: str, *, suffix: str) -> Path:
+    """Deterministic cache file for one official EMA URL."""
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+    return cache_dir / f"{digest}{suffix}"
+
+
+def cached_get(
+    client: httpx.Client,
+    url: str,
+    *,
+    cache_dir: Path | None,
+    suffix: str = ".html",
+    ttl_seconds: float = CACHE_TTL_SECONDS,
+    force: bool = False,
+) -> bytes:
+    """GET an EMA URL, reusing a fresh cached copy when one exists.
+
+    Rate-limits and makes repeated runs cheap: `resolve` touches ~40 EPAR pages, and
+    EMA asks to be treated gently. ``force`` bypasses the cache for a fresh read.
+    """
+    if cache_dir is not None:
+        path = cache_path(cache_dir, url, suffix=suffix)
+        if not force and path.exists() and time.time() - path.stat().st_mtime < ttl_seconds:
+            return path.read_bytes()
+    else:
+        path = None
+    response = client.get(url)
+    response.raise_for_status()
+    content = response.content
+    if path is not None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
+    return content
+
+
+def fetch_bulk_report_cached(
+    client: httpx.Client,
+    cache_dir: Path | None,
+    *,
+    url: str = BULK_REPORT_URL,
+    force: bool = False,
+) -> bytes:
+    """Download EMA's nightly bulk medicine export, cached by the day."""
+    return cached_get(
+        client, url, cache_dir=cache_dir, suffix=".xlsx", ttl_seconds=24 * 60 * 60, force=force
+    )
+
+
+def resolve_medicine_cached(
+    client: httpx.Client,
+    epar_url: str,
+    *,
+    cache_dir: Path | None,
+    force: bool = False,
+) -> tuple[dict[Lang, ResolvedDocument], str | None]:
+    """Resolve an EPAR page from cache or the network, then read its PDF links."""
+    html = cached_get(client, epar_url, cache_dir=cache_dir, force=force).decode(
+        "utf-8", errors="replace"
+    )
+    links = parse_product_information_links(html)
+    revision = parse_revision_date(html)
+    documents = {
+        lang: ResolvedDocument(lang=lang, url=url, revision_date=revision)
+        for lang, url in links.items()
+    }
+    return documents, revision
 
 
 def fetch_bulk_report(client: httpx.Client, url: str = BULK_REPORT_URL) -> bytes:
@@ -267,6 +342,25 @@ def main(argv: list[str] | None = None) -> int:
         row = by_name.get(name.lower())
         print(f"{name}: {row.epar_url if row else 'NOT FOUND'}")
     return 0
+
+
+__all__ = [
+    "BULK_REPORT_URL",
+    "CACHE_TTL_SECONDS",
+    "MedicineLink",
+    "ResolvedDocument",
+    "build_client",
+    "cache_path",
+    "cached_get",
+    "fetch_bulk_report",
+    "fetch_bulk_report_cached",
+    "main",
+    "parse_bulk_rows",
+    "parse_product_information_links",
+    "parse_revision_date",
+    "resolve_medicine",
+    "resolve_medicine_cached",
+]
 
 
 if __name__ == "__main__":  # pragma: no cover

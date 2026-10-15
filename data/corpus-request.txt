@@ -1,0 +1,54 @@
+# Requested EMA medicine names for the M2 corpus.
+#
+# Feed the non-comment lines to `medleaf resolve --continue-on-error`; the names under
+# REJECTED are kept here because the milestone report must show what was asked for and
+# what EMA's bulk report would not resolve, rather than quietly dropping them.
+#
+# Delivered (40, EN + EL, checksum-pinned in data/medicines.yaml):
+Eliquis
+Humira
+Jardiance
+Ozempic
+Xarelto
+Forxiga
+Trulicity
+Rybelsus
+Mounjaro
+Victoza
+Pradaxa
+Lixiana
+Entresto
+Brilique
+Repatha
+Praluent
+Lyrica
+Aimovig
+Tecfidera
+Ocrevus
+Tysabri
+Enbrel
+Remicade
+Stelara
+Cosentyx
+Dupixent
+Rinvoq
+Keytruda
+Opdivo
+Imfinzi
+Herceptin
+Tagrisso
+Comirnaty
+Shingrix
+Kaftrio
+Eylea
+Soliris
+Ibrance
+Fasenra
+Nubeqa
+#
+# REJECTED — not found in EMA's bulk medicines report (checked 2026-10-15):
+#   Crestor, Symbicort, Trelegy, Xeljanz, Ferinject, Toujeo, Xolair, Vabysmo, Aranesp
+# REJECTED — resolved URL served the wrong language:
+#   Perjeta: the /el/ product-information URL returned Estonian bytes
+#     (sha256 e663bc517f96..., "RAVIMI OMADUSTE KOKKUVOTE"), so it was dropped
+#     rather than indexed as Greek. See docs/M2-acceptance.md.

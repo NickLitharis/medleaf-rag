@@ -1,0 +1,86 @@
+{
+  "version": "m2-smoke-1",
+  "note": "Ten hand-written M2 acceptance questions (5 per language), one per the five M1 medicines. Each names the medicine it is about, the corpus language, and the SmPC section that answers it; the acceptance test requires that section in the top 5 hits. This is a smoke set for the M2 acceptance, not the M3 evaluation dataset.",
+  "queries": [
+    {
+      "id": "en-1",
+      "lang": "en",
+      "question": "What are the contraindications of Eliquis?",
+      "medicine": "eliquis",
+      "doc": "smpc",
+      "expected_sections": ["4.3"]
+    },
+    {
+      "id": "en-2",
+      "lang": "en",
+      "question": "How should Humira be stored?",
+      "medicine": "humira",
+      "doc": "smpc",
+      "expected_sections": ["6.4"]
+    },
+    {
+      "id": "en-3",
+      "lang": "en",
+      "question": "Which side effects of Ozempic are very common?",
+      "medicine": "ozempic",
+      "doc": "smpc",
+      "expected_sections": ["4.8"]
+    },
+    {
+      "id": "en-4",
+      "lang": "en",
+      "question": "Can Xarelto be used during pregnancy?",
+      "medicine": "xarelto",
+      "doc": "smpc",
+      "expected_sections": ["4.6"]
+    },
+    {
+      "id": "en-5",
+      "lang": "en",
+      "question": "What is Jardiance used for?",
+      "medicine": "jardiance",
+      "doc": "smpc",
+      "expected_sections": ["4.1"]
+    },
+    {
+      "id": "el-1",
+      "lang": "el",
+      "question": "Ποιες είναι οι αντενδείξεις του Eliquis;",
+      "medicine": "eliquis",
+      "doc": "smpc",
+      "expected_sections": ["4.3"]
+    },
+    {
+      "id": "el-2",
+      "lang": "el",
+      "question": "Πώς πρέπει να φυλάσσεται το Humira;",
+      "medicine": "humira",
+      "doc": "smpc",
+      "expected_sections": ["6.4"]
+    },
+    {
+      "id": "el-3",
+      "lang": "el",
+      "question": "Ποιες ανεπιθύμητες ενέργειες του Ozempic είναι πολύ συχνές;",
+      "medicine": "ozempic",
+      "doc": "smpc",
+      "expected_sections": ["4.8"]
+    },
+    {
+      "id": "el-4",
+      "lang": "el",
+      "question": "Επιτρέπεται η χρήση Xarelto στην εγκυμοσύνη;",
+      "medicine": "xarelto",
+      "doc": "smpc",
+      "expected_sections": ["4.6"]
+    },
+    {
+      "id": "el-5",
+      "lang": "el",
+      "question": "Σε ποιες ενδείξεις χρησιμοποιείται το Jardiance;",
+      "medicine": "jardiance",
+      "doc": "smpc",
+      "expected_sections": ["4.1"]
+    }
+  ]
+}

@@ -21,14 +21,25 @@
     {
       "id": "M2",
       "name": "All ~40 medicines, hybrid search, /v1/search, Docker Compose",
-      "status": "not_started",
+      "status": "in_progress",
       "acceptance": "curl returns relevant chunks for 5 sample questions in each language",
-      "evidence": [],
+      "evidence": [
+        "Corpus: 40 centrally authorised medicines across >=8 ATC areas, EN+EL, 80/80 PDFs downloaded, language-verified and sha256-pinned. The five M1 entries are byte-identical to the previous revision. Perjeta was rejected (the /el/ URL served Estonian bytes, caught by the language re-check) and nine requested names are absent from EMA's bulk report; both lists are in data/corpus-request.txt and docs/M2-acceptance.md.",
+        "Hybrid retrieval implemented and tested: intfloat/multilingual-e5-base dense (passage:/query: prefixes enforced, revision d128750597153bb5987e10b1c3493a34e5a4502a, safetensors) plus Qdrant sparse vectors with Modifier.IDF, fused by Qdrant RRF; acent-stripped Greek tokens; exact medicine/lang/doc/corpus_version/active_substance filters; logical chunk IDs with uuid5(lang:chunk_id) physical point IDs.",
+        "Index built locally against an isolated Qdrant container: 2772 points, 80 medicine-language pairs, 0 missing sources, 1566 s on 16 CPU cores, corpus_version=medicines.yaml:9ddd9754264c. Manifest records the model revision, dense dim 768, sparse idf, per-pair chunk counts and metadata coverage.",
+        "API and CLI: /v1/search (POST + GET mirror) and `medleaf search` share one RetrievalService. Missing index, unreachable Qdrant or unloadable model return HTTP 503 with a machine-readable code (verified live before the index existed). docker-compose.yml (qdrant + indexer profile + api, loopback ports) and a Dockerfile that installs its own CPU torch/Qdrant/FastAPI stack (docker build exit 0).",
+        "Local checks: `ruff check .` clean; fast suite 54 passed / 13 skipped; tests/test_m2_qdrant.py 11 passed against a real Qdrant server (7 of them also pass in in-memory mode); new unit tests cover prefix enforcement, accent folding, point IDs, exact filters, cache invalidation, corpus-version re-stamping, tokenizer-budget splitting with full-text preservation, payload metadata and payload-only annotation.",
+        "MEASURED FAILURE (this is why M2 is not complete): the served index was built before the chunking/metadata fixes, and `medleaf index window-report` measures 727 of 2772 chunks above the 496-token window (worst: comirnaty:smpc:10 at 164861 tokens; all 40 medicines affected). Evidence: docs/m2-window-report.json. The ten-question curl run therefore hits the expected SmPC section in only 5 of 10 cases (5/5 EN, 0/5 EL) because giant *:smpc:10 blocks win the sparse channel; full per-question results in docs/M2-acceptance.md.",
+        "Root cause of the oversized chunks: the M1 paragraph splitter emitted an oversized paragraph whole, and the SmPC/leaflet span detector does not find the annex boundary for several of the 40 PDFs, so document tails are attributed to the last known heading (Comirnaty's 903 KB English parse contains no 'ANNEX II' marker). The splitter is fixed and tested (tokenizer-aware ChunkBudget from Encoder.count_tokens); the span detector fix is parser work in src/medleaf/ingest/pdf.py and must land before the rebuild, otherwise annex text would be split into thousands of chunks.",
+        "Metadata was completed on the running index without re-embedding: `medleaf index annotate` attached active_substance/atc_code to all 2772 points in payload only and recorded them plus missing_metadata (empty) in the manifest."
+      ],
       "remaining_gates": [
-        "Corpus expanded to ~40 medicines",
-        "Hybrid (dense + sparse) retrieval and /v1/search endpoint",
-        "Docker Compose stack",
-        "Five sample questions per language return relevant chunks"
+        "Fix the SmPC/leaflet end detection in src/medleaf/ingest/pdf.py so section 10, leaflet 6 and 5.2 stop at their real boundary, then run the M1 corpus tests on the 40-medicine corpus.",
+        "Rebuild the affected medicines (`medleaf index build --no-recreate --only <slugs>`, targeted prune, ~26 min for a full rebuild on CPU) and re-run `medleaf index window-report --json` until over_window=0.",
+        "Re-run the ten sample questions (5 per language) and update docs/M2-acceptance.md; only then can the M2 acceptance claim hold.",
+        "Chunk parts of a split long section are per language: the logical chunk_id covers the section, but part boundaries differ between Greek and English because the text lengths differ.",
+        "Sparse-only recall is not benchmarked yet; M3's evaluation set is where sparse-vs-dense recall is measured (SPEC section 17).",
+        "The index build (26 min, torch) is not run in CI; CI runs ruff, the fast suite and in-memory-Qdrant contract tests plus the opt-in M1 corpus job."
       ]
     },
     {

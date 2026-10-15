@@ -1,0 +1,18 @@
+# Keep the image to the code and dependency metadata. The corpus and every derived
+# artifact are mounted at runtime (or rebuilt in the container), never baked in.
+.git
+.github
+.venv
+.tmp
+.mypy_cache
+.pytest_cache
+.ruff_cache
+data/raw
+data/parsed
+data/index
+data/models
+data/cache
+docs
+tests
+*.md
+!README.md

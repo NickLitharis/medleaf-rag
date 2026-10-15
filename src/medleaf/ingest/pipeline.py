@@ -7,7 +7,12 @@ from pathlib import Path
 
 import fitz  # PyMuPDF
 
-from medleaf.ingest.chunk import append_table_lines, build_sections, extract_tables_for_pages
+from medleaf.ingest.chunk import (
+    ChunkBudget,
+    append_table_lines,
+    build_sections,
+    extract_tables_for_pages,
+)
 from medleaf.ingest.pdf import (
     SMPC_HEADING_RE,
     RawLine,
@@ -20,6 +25,10 @@ from medleaf.ingest.pdf import (
 )
 from medleaf.models import DocKind, Lang, Medicine, ParsedDocument, Section
 from medleaf.sections import SMPC_NUMBERS
+
+#: Bump when parsing or chunking changes in a way that alters Section output. It is part
+#: of the parse-cache key, so a stale cached parse can never be reused after a fix.
+PARSER_CACHE_VERSION = "medleaf-parser-2"
 
 #: SmPC sections whose pages can carry flattened side-effect tables (SPEC section 8).
 #: Table detection is the expensive part of parsing, so it runs only on these spans.
@@ -58,11 +67,13 @@ def parse_pdf(
     pdf_path: Path,
     corpus_version: str,
     max_tokens: int,
+    budget: ChunkBudget | None = None,
 ) -> ParsedDocument:
     """Parse one product-information PDF into chunked sections.
 
     Side-effect tables are flattened and appended to the section that contains them, so
-    the frequency information stays next to its heading (SPEC section 8).
+    the frequency information stays next to its heading (SPEC section 8). ``budget``
+    carries the embedding window when the caller will index the chunks.
     """
     document_ref = medicine.documents[lang]
     source_url = str(document_ref.url)
@@ -89,6 +100,7 @@ def parse_pdf(
                 revision_date=revision_date,
                 corpus_version=corpus_version,
                 max_tokens=max_tokens,
+                budget=budget,
             )
         )
 

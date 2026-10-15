@@ -110,7 +110,9 @@ def _detect_pdf_language(path: Path) -> Lang:
     return detect_language(sample)
 
 
-def download_medicine(client: httpx.Client, medicine: Medicine, raw_dir: Path) -> list[DownloadResult]:
+def download_medicine(
+    client: httpx.Client, medicine: Medicine, raw_dir: Path
+) -> list[DownloadResult]:
     """Download both language versions of one medicine."""
     results: list[DownloadResult] = []
     for lang, document in medicine.documents.items():

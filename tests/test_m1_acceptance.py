@@ -55,6 +55,47 @@ def test_grid_table_keeps_the_column_frequency() -> None:
     assert "Allergic reaction, dermatitis - Uncommon" in lines
 
 
+def test_grid_first_column_only_reaction_keeps_its_frequency() -> None:
+    """A non-bold first-column-only row is a Common reaction, not a heading.
+
+    Font weight is the only signal that separates it from a bold SOC heading such as
+    ``Eye disorders``; without it the frequency was silently dropped.
+    """
+    rows = [
+        ["Common", "Uncommon", "Rare"],
+        ["Eye disorders", "", ""],
+        ["Eye haemorrhage (incl. conjunctival haemorrhage)", "", ""],
+        ["Hypotension, haematoma", "", ""],
+    ]
+    bolds: list[list[bool | None]] = [
+        [True, True, True],
+        [True, None, None],
+        [False, False, False],
+        [False, False, False],
+    ]
+
+    lines = flatten_table_rows(rows, bolds)
+
+    # The bold SOC heading stays a bare heading and never takes a frequency.
+    assert "Eye disorders" in lines
+    assert not any(line.startswith("Eye disorders") and " - " in line for line in lines)
+    # The regular first-column-only rows become reactions with column 0's frequency.
+    assert "Eye haemorrhage (incl. conjunctival haemorrhage) - Common" in lines
+    assert "Hypotension, haematoma - Common" in lines
+
+
+def test_grid_first_column_only_defaults_to_heading_without_font_metadata() -> None:
+    """With no font metadata an ambiguous row stays a heading (safe, no wrong band)."""
+    rows = [["Common", "Uncommon"], ["Ambisomething", ""], ["Anaemia", "Thrombocytosis"]]
+
+    lines = flatten_table_rows(rows)
+
+    assert "Ambisomething" in lines
+    assert not any(line.startswith("Ambisomething") and " - " in line for line in lines)
+    assert "Anaemia - Common" in lines
+    assert "Thrombocytosis - Uncommon" in lines
+
+
 def test_labelled_table_uses_named_frequency_columns() -> None:
     """The Reaction|Frequency shape keeps the named bands, as Humira uses."""
     rows = [
@@ -165,7 +206,6 @@ def test_corpus_section_coverage_and_tables(slug: str, lang: Lang) -> None:
 
 
 def test_xarelto_en_frequency_associations() -> None:
-    """Regression: the first frequency column must not be glued onto the next one."""
     _require_corpus()
     _, medicines = _corpus_medicines()
     medicine = next(item for item in medicines if item.slug == "xarelto")
@@ -185,3 +225,40 @@ def test_xarelto_en_frequency_associations() -> None:
     # would start with 'Anaemia' and carry 'Thrombocytosis' in the same line.
     glued = [line for line in lines if line.startswith("Anaemia") and "Thrombocytosis" in line]
     assert not glued, glued
+
+
+def test_xarelto_en_first_column_only_reaction_keeps_frequency() -> None:
+    """Real-PDF evidence: a first-column-only reaction is Common, not a dropped heading.
+
+    Xarelto's 4.8 table is grid-shaped (``Common | Uncommon | ...``). Rows such as
+    ``Eye haemorrhage (incl. conjunctival haemorrhage)`` and ``Hypotension, haematoma``
+    appear only in the Common column; they are regular weight, while the surrounding
+    SOC headings are bold and must stay bare.
+    """
+    _require_corpus()
+    _, medicines = _corpus_medicines()
+    medicine = next(item for item in medicines if item.slug == "xarelto")
+    parsed = _parse(medicine, Lang.EN)
+    text = "\n".join(
+        section.text for section in parsed.by_doc(DocKind.SMPC) if section.section == "4.8"
+    )
+    lines = text.splitlines()
+
+    eye = [line for line in lines if line.startswith("Eye haemorrhage")]
+    assert eye, "Eye haemorrhage row missing from xarelto_en 4.8"
+    assert any("Common" in line for line in eye), eye
+
+    hypoten = [line for line in lines if line.startswith("Hypotension")]
+    assert hypoten, "Hypotension row missing from xarelto_en 4.8"
+    assert any("Common" in line for line in hypoten), hypoten
+
+    # Bold SOC headings must never be given a frequency band. (A heading line may be
+    # dropped by de-duplication against surrounding prose, but it must never acquire
+    # an adverse-reaction frequency.)
+    for heading in ("Eye disorders", "Nervous system disorders", "Vascular disorders"):
+        mismatched = [
+            line
+            for line in lines
+            if line.startswith(heading) and any(freq in line for freq in (" - Common", " - Rare"))
+        ]
+        assert not mismatched, f"SOC heading given a frequency: {mismatched}"

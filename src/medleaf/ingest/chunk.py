@@ -12,10 +12,17 @@ SPEC section 8:
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import fitz  # PyMuPDF
 
 from medleaf.models import DocKind, Lang, Section
+
+#: A cell is "bold" when the first non-empty text span inside it has PyMuPDF's bold
+#: flag (bit 4 of ``span['flags']``). EMA system-organ-class headings are bold; the
+#: reaction names under them are not, and that is the only thing that separates a
+#: heading row from a reaction that sits only in the first frequency column.
+_BOLD_FLAG = 1 << 4
 
 # Table detection: a paragraph made of pipe-separated cells produced by the flattener.
 FREQUENCY_WORDS = {
@@ -76,7 +83,10 @@ def _is_frequency_label(cell: str) -> bool:
     return bool(FREQUENCY_RE.search(cell))
 
 
-def flatten_table_rows(rows: list[list[str]]) -> list[str]:
+def flatten_table_rows(
+    rows: list[list[str | None]],
+    bolds: list[list[bool | None]] | None = None,
+) -> list[str]:
     """Turn a side-effect table into one readable line per reaction/frequency pair.
 
     EMA ships two table shapes, and they need different flattening:
@@ -90,8 +100,14 @@ def flatten_table_rows(rows: list[list[str]]) -> list[str]:
       Treating the first cell as a reaction here is what previously produced lies like
       ``Anaemia - Thrombocytosis`` (two different frequencies glued together).
 
-    A row with a single value in the first column of a grid is a system-organ-class
-    heading, not a reaction.
+    A grid row with a single value in the first column is either a system-organ-class
+    heading or a reaction that only ever appears in the first frequency column. Font
+    weight is the only reliable discriminator: ``bolds`` carries the per-cell bold flag
+    from the page text (``True`` bold, ``False`` regular, ``None`` unknown). A bold
+    first cell is kept as a heading; a regular one is emitted as a reaction with the
+    first column's frequency. When ``bolds`` is absent (or the flag is unknown) the row
+    is treated as a heading, which is safe but loses the frequency — callers that have
+    the page should pass ``bolds``.
     """
     if not rows:
         return []
@@ -101,7 +117,7 @@ def flatten_table_rows(rows: list[list[str]]) -> list[str]:
 
     lines: list[str] = []
     current_reaction = ""
-    for row in rows[1:]:
+    for row_index, row in enumerate(rows[1:], start=1):
         cells = [_clean_cell(cell) for cell in row]
         if not any(cells):
             continue
@@ -109,8 +125,13 @@ def flatten_table_rows(rows: list[list[str]]) -> list[str]:
         if grid_form:
             present = [(index, value) for index, value in enumerate(cells) if value]
             if len(present) == 1 and present[0][0] == 0:
-                # System-organ-class heading row (or a reaction with no other band).
-                lines.append(cells[0])
+                if _cell_is_regular(bolds, row_index, 0):
+                    # A reaction that lives only in the first frequency column.
+                    label = header[0] if header else ""
+                    lines.append(f"{cells[0]} - {label}" if label else cells[0])
+                else:
+                    # System-organ-class heading (bold, or weight unknown).
+                    lines.append(cells[0])
                 continue
             for index, value in present:
                 label = header[index] if index < len(header) else ""
@@ -140,6 +161,63 @@ def flatten_table_rows(rows: list[list[str]]) -> list[str]:
     return lines
 
 
+def _cell_is_regular(
+    bolds: list[list[bool | None]] | None,
+    row_index: int,
+    column_index: int,
+) -> bool:
+    """True only when the cell is known to be non-bold (a reaction, not a heading)."""
+    if bolds is None or row_index >= len(bolds):
+        return False
+    row = bolds[row_index]
+    if column_index >= len(row):
+        return False
+    return row[column_index] is False
+
+
+def _page_bold_spans(page: fitz.Page) -> list[tuple[fitz.Rect, bool]]:
+    """Text spans on a page as ``(bbox, is_bold)``, extracted once per page."""
+    spans: list[tuple[fitz.Rect, bool]] = []
+    for block in page.get_text("dict")["blocks"]:
+        for line in block.get("lines", ()):
+            for span in line["spans"]:
+                if span["text"].strip():
+                    spans.append((fitz.Rect(span["bbox"]), bool(span["flags"] & _BOLD_FLAG)))
+    return spans
+
+
+def _cell_bold_flags(
+    table_rows: Any,
+    spans: list[tuple[fitz.Rect, bool]],
+) -> list[list[bool | None]]:
+    """Bold flag per table cell, in the same row/cell order as ``table.extract()``.
+
+    PyMuPDF's cell rectangles touch neighbouring text spans by a fraction of a point,
+    so a plain ``intersects`` test picks the wrong span at a row boundary. The span with
+    the largest overlap area is the cell's real text; a cell with no overlapping span is
+    ``None`` (PyMuPDF reports merged/empty cells with no geometry), and an unknown weight
+    must not be read as a reaction.
+    """
+    flags: list[list[bool | None]] = []
+    for row in table_rows:
+        row_flags: list[bool | None] = []
+        for cell in row.cells:
+            if cell is None:
+                row_flags.append(None)
+                continue
+            rect = fitz.Rect(cell)
+            bold: bool | None = None
+            best_area = 0.0
+            for span_rect, span_bold in spans:
+                area = (rect & span_rect).get_area()
+                if area > best_area:
+                    best_area = area
+                    bold = span_bold
+            row_flags.append(bold)
+        flags.append(row_flags)
+    return flags
+
+
 def _clean_cell(cell: str | None) -> str:
     if not cell:
         return ""
@@ -154,9 +232,13 @@ def extract_tables_for_pages(pdf_path: str, pages: set[int]) -> dict[int, list[s
             if page_number < 1 or page_number > document.page_count:
                 continue
             page = document[page_number - 1]
+            spans = _page_bold_spans(page)
             lines: list[str] = []
             for table in page.find_tables().tables:
-                lines.extend(flatten_table_rows(table.extract()))
+                rows = table.extract()
+                table_rows = getattr(table, "rows", None)
+                bolds = _cell_bold_flags(table_rows, spans) if table_rows is not None else None
+                lines.extend(flatten_table_rows(rows, bolds))
             result[page_number] = lines
     return result
 

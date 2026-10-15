@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "updated": "2026-10-15",
+  "notes": "Durable M1-M7 workflow ledger. Status reflects the SPEC section 16 acceptance, not effort spent. Each milestone gets a fresh agent and its own branch; update the matching entry (status/evidence/remaining_gates) in the same commit that advances it. Complete means the acceptance is genuinely met, not that sample checks pass.",
+  "milestones": [
+    {
+      "id": "M1",
+      "name": "Repo skeleton, CI, download + parse for 5 medicines EN+EL",
+      "status": "partial",
+      "acceptance": "Section-coverage tests pass; side-effect tables readable; licence wording confirmed",
+      "evidence": [
+        "10/10 corpus files resolved, downloaded, language-verified and sha256-pinned in data/medicines.yaml; SmPC 28/28 plus required leaflet sections present for all five medicines in EN and EL.",
+        "Grid-table first-column frequency loss fixed: extract_tables_for_pages surfaces PyMuPDF page-span font weight per cell; bold first-column-only rows stay system-organ-class headings, regular ones become 'Reaction - <column 1 frequency>'. Verified on the real xarelto_en PDF (Eye haemorrhage - Common, Hypotension, haematoma - Common) and pinned by unit + corpus tests.",
+        "Local: MEDLEAF_M1_CORPUS=1 MEDLEAF_SMOKE_PDF=data/raw/xarelto/xarelto_el.pdf PYTHONPATH=src python -m pytest -q -> 34 passed, 0 skipped; default offline run -> 21 passed, 13 skipped; 'ruff check .' clean.",
+        ".github/workflows/ci.yml added: push/PR runs Ruff + fast tests only; the EMA corpus is an explicit manual workflow_dispatch opt-in that downloads the assets before running corpus tests, so CI never claims untested corpus coverage.",
+        "Official EMA legal notice and quoted terms recorded in docs/M1-acceptance.md; code is MIT while the corpus PDFs remain EMA copyright with attribution; no blanket legal or clinical clearance is claimed."
+      ],
+      "remaining_gates": [
+        "Confirm the pushed GitHub Actions CI run (Ruff + fast tests) is green."
+      ]
+    },
+    {
+      "id": "M2",
+      "name": "All ~40 medicines, hybrid search, /v1/search, Docker Compose",
+      "status": "not_started",
+      "acceptance": "curl returns relevant chunks for 5 sample questions in each language",
+      "evidence": [],
+      "remaining_gates": [
+        "Corpus expanded to ~40 medicines",
+        "Hybrid (dense + sparse) retrieval and /v1/search endpoint",
+        "Docker Compose stack",
+        "Five sample questions per language return relevant chunks"
+      ]
+    },
+    {
+      "id": "M3",
+      "name": "Eval dataset v1 + runner + retrieval gate",
+      "status": "not_started",
+      "acceptance": "Baseline recorded; a deliberately broken PR fails CI (S8)",
+      "evidence": [],
+      "remaining_gates": [
+        "Evaluation dataset v1 built",
+        "Runner records a baseline",
+        "CI gate fails a deliberately broken retrieval PR"
+      ]
+    },
+    {
+      "id": "M4",
+      "name": "Safety layer, reranker, refusal, /v1/ask with SSE + citations",
+      "status": "not_started",
+      "acceptance": "S3, S4, S5 measured; invented citations stripped and logged",
+      "evidence": [],
+      "remaining_gates": [
+        "Safety layer and reranker",
+        "Refusal and fixed redirect messages",
+        "/v1/ask with SSE and citations",
+        "S3/S4/S5 measured; invented citations stripped and logged"
+      ]
+    },
+    {
+      "id": "M5",
+      "name": "Langfuse tracing, RAGAS faithfulness, eval-full.yml",
+      "status": "not_started",
+      "acceptance": "One trace per request with safety, retrieval and LLM spans",
+      "evidence": [],
+      "remaining_gates": [
+        "Langfuse tracing wired through request handling",
+        "RAGAS faithfulness evaluation",
+        "eval-full.yml workflow",
+        "One trace per request with safety, retrieval and LLM spans"
+      ]
+    },
+    {
+      "id": "M6",
+      "name": "LoRA fine-tune + 2x2 comparison",
+      "status": "not_started",
+      "acceptance": "Adapter on HF Hub; results table in README",
+      "evidence": [],
+      "remaining_gates": [
+        "LoRA fine-tune of embeddings",
+        "2x2 comparison run",
+        "Adapter published to HF Hub",
+        "Results table in README"
+      ]
+    },
+    {
+      "id": "M7",
+      "name": "Release with Qdrant snapshot, README polish, demo GIF, CV line",
+      "status": "not_started",
+      "acceptance": "S1 verified from a fresh clone on a clean machine",
+      "evidence": [],
+      "remaining_gates": [
+        "Qdrant snapshot bundled",
+        "README polish, demo GIF and CV line",
+        "S1 verified from a fresh clone on a clean machine"
+      ]
+    }
+  ]
+}

@@ -1,9 +1,12 @@
 # M1 acceptance — download + parse for 5 medicines (EN + EL)
 
-Status: **download and section-coverage checks pass locally (2026-10-15)** for all ten
-language files below. Full M1 acceptance remains open: some grid-table rows lose their
-frequency label. The table counts below show readable rows, not complete table fidelity.
-Official licence terms are recorded; this report does not assert legal clearance.
+Status: **M1 acceptance met locally (2026-10-15)** for all ten language files below:
+download, section coverage and side-effect table extraction all pass. The grid-table
+first-column frequency loss is fixed: font weight separates a bold system-organ-class
+heading from a regular first-column-only reaction, so this report no longer carries that
+open gap. The table counts are readable rows, not a line-by-line clinical audit, and the
+PDFs themselves have not been checked for clinical accuracy. Official licence terms are
+recorded; this report does not assert legal clearance.
 
 ## Corpus (5 medicines × 2 languages = 10 distinct PDFs)
 
@@ -21,8 +24,8 @@ requested). `sha256` is pinned in `data/medicines.yaml`.
 | jardiance| el   | 2026-03-24 | 9e52657ac24a | 3221173 | 28/28 | 6/6 | 3 |
 | ozempic  | en   | 2026-08-25 | 57219aa6be0c | 1400861 | 28/28 | 6/6 | 6 |
 | ozempic  | el   | 2026-08-25 | 6a66cb6ff9fa | 1820238 | 28/28 | 6/6 | 6 |
-| xarelto  | en   | 2026-09-22 | 296cd19bd9d5 | 2884512 | 28/28 | 6/6 | 29 |
-| xarelto  | el   | 2026-09-22 | ae1220c9504c | 8342780 | 28/28 | 6/6 | 29 |
+| xarelto  | en   | 2026-09-22 | 296cd19bd9d5 | 2884512 | 28/28 | 6/6 | 31 |
+| xarelto  | el   | 2026-09-22 | ae1220c9504c | 8342780 | 28/28 | 6/6 | 31 |
 
 "SmPC sections 28/28" = every number in `SMPC_NUMBERS`; required subset
 (`4.1–4.9`, `6.4`) present in all ten. English URLs under `/en/` redirect Greek files to
@@ -43,8 +46,8 @@ PYTHONPATH=src python -m medleaf.cli check
 PYTHONPATH=src python -m medleaf.cli tables --samples 2 --max-chars 110
 
 # Tests.
-PYTHONPATH=src python -m pytest -q                       # 19 passed, 12 skipped
-MEDLEAF_M1_CORPUS=1 PYTHONPATH=src python -m pytest tests/test_m1_acceptance.py -q  # 15 passed
+PYTHONPATH=src python -m pytest -q                       # 21 passed, 13 skipped
+MEDLEAF_M1_CORPUS=1 PYTHONPATH=src python -m pytest tests/test_m1_acceptance.py -q  # 18 passed
 # Opt-in with missing assets fails (no green skip):
 MEDLEAF_M1_CORPUS=1 MEDLEAF_DATA_DIR=.tmp/emptydata PYTHONPATH=src \
     python -m pytest tests/test_m1_acceptance.py::test_xarelto_en_frequency_associations -q
@@ -82,14 +85,37 @@ reaction column) previously flattened the two cells of one row into the lie
 position. Regression test: `test_grid_table_keeps_the_column_frequency`, backed by
 `test_xarelto_en_frequency_associations` on the real PDF.
 
+A grid row with a value only in the first column was still ambiguous: it is either a bold
+system-organ-class heading or a regular reaction that only ever appears under `Common`.
+PyMuPDF's `extract()` drops font weight, so `extract_tables_for_pages` now reads the page
+text spans once per page and passes a per-cell bold flag to `flatten_table_rows`; the span
+with the largest overlap area decides a cell's weight, because cell rectangles touch
+neighbouring spans by a fraction of a point. A bold first cell stays a heading, a regular
+one becomes `Reaction - <first column frequency>`. On Xarelto EN this recovers `Eye
+haemorrhage (incl. conjunctival haemorrhage) - Common` and `Hypotension, haematoma -
+Common`. Regression tests: `test_grid_first_column_only_reaction_keeps_its_frequency`,
+`test_grid_first_column_only_defaults_to_heading_without_font_metadata` (no metadata keeps
+the row a heading, never a guessed band), and the real-PDF
+`test_xarelto_en_first_column_only_reaction_keeps_frequency`.
+
 Deliberate mutation check: forcing `grid_form = False` makes
 `test_grid_table_keeps_the_column_frequency` **fail**; restoring the code makes it pass.
+
+A second mutation check covers the new path: making `_cell_is_regular` return an
+unconditional `False` makes `test_grid_first_column_only_reaction_keeps_its_frequency`
+**fail**; restoring the code makes it pass.
 
 ## Independent review
 
 The parent reviewer enabled both corpus and performance checks and ran the full suite:
-31 tests passed, none skipped, in 32.47 seconds. The whole process took 38 seconds and
-exited with code 0. Ruff passed on all six changed Python files.
+31 tests passed, none skipped, in 32.47 seconds (recorded before the grid-table font fix).
+The whole process took 38 seconds and exited with code 0. Ruff passed on all six changed
+Python files.
+
+Current suite after the font-weight fix: `MEDLEAF_M1_CORPUS=1 MEDLEAF_SMOKE_PDF=<pdf>
+PYTHONPATH=src python -m pytest -q` reports **34 passed**, no skips, in 56.35 seconds; the
+default offline run reports **21 passed, 13 skipped**. Whole-repo `ruff check .` passes.
+`mypy --strict` is configured but is not installed and is not run in CI.
 
 The reviewer also reran `medleaf check` and `medleaf tables`: both exited with code 0,
 with the same ten coverage and row-count results above. All ten local PDF hashes matched
@@ -129,10 +155,11 @@ cleared. `data/medicines.yaml` carries the EMA attribution header; the README mu
 1. **Table extraction quality.** PDF text extraction splits some words across line breaks
    (`Hypersensiti vity`, `Δυσγευσία` fragments). Sample associations and regression tests
    pass, but the full extraction has not been checked for clinical accuracy.
-2. **Grid-table heuristic.** A reaction that appears only in the first frequency column of a
-   grid table is emitted as a bare heading line, because PyMuPDF's `extract()` exposes no
-   font weight to tell a system-organ-class heading from a Common-only reaction. No wrong
-   association is produced, but the frequency is dropped on such rows.
+2. **Grid-table heading test.** A first-column-only grid row is classified by font weight:
+   bold means a system-organ-class heading, regular means a reaction under column 1's
+   frequency. This holds for all ten EMA files checked, but it is a layout heuristic, not a
+   semantic check — a non-bold heading or a bold reaction would be misread. When the weight
+   is unknown the row is kept as a heading: safe, but its frequency is dropped.
 3. **Eliquis 4.8 layout.** Uses a multi-indication labelled table; rows are several hundred
    characters and are truncated in the `tables` display (`--max-chars`), not in the stored
    chunk text.

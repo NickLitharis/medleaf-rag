@@ -111,7 +111,9 @@ def extract_lines(pdf_path: str, *, max_pages: int | None = None) -> list[RawLin
     """Extract every visual line from a PDF, in page order."""
     lines: list[RawLine] = []
     with fitz.open(pdf_path) as document:
-        page_count = document.page_count if max_pages is None else min(max_pages, document.page_count)
+        page_count = (
+            document.page_count if max_pages is None else min(max_pages, document.page_count)
+        )
         for index in range(page_count):
             lines.extend(iter_lines(document[index], index + 1))
     return lines

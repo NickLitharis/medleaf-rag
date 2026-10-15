@@ -1,0 +1,13 @@
+{
+  "_note": "SPEC §11 medicine splits. Stratified by therapeutic area; same-substance medicines (ozempic/rybelsus) share a split.",
+  "eliquis": "train", "xarelto": "train", "ozempic": "train", "rybelsus": "train",
+  "jardiance": "train", "mounjaro": "train", "entresto": "train", "humira": "train",
+  "enbrel": "train", "remicade": "train", "tysabri": "train", "keytruda": "train",
+  "herceptin": "train", "comirnaty": "train", "dupixent": "train", "kaftrio": "train",
+  "pradaxa": "dev", "forxiga": "dev", "trulicity": "dev", "repatha": "dev",
+  "aimovig": "dev", "tecfidera": "dev", "stelara": "dev", "rinvoq": "dev",
+  "opdivo": "dev", "ibrance": "dev", "shingrix": "dev", "fasenra": "dev",
+  "lixiana": "test", "brilique": "test", "victoza": "test", "praluent": "test",
+  "lyrica": "test", "ocrevus": "test", "cosentyx": "test", "soliris": "test",
+  "imfinzi": "test", "tagrisso": "test", "nubeqa": "test", "eylea": "test"
+}

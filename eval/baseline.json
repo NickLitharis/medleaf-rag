@@ -1,0 +1,1046 @@
+{
+  "split": "dev",
+  "dataset": "eval/datasets/retrieval-v1.jsonl",
+  "corpus_version": "medicines.yaml:9ddd9754264c",
+  "embed_model": "intfloat/multilingual-e5-base@d128750597153bb5987e10b1c3493a34e5a4502a",
+  "questions": 63,
+  "unscored_no_gold": 6,
+  "overall": {
+    "total": 57,
+    "recall_at_5": {
+      "hits": 48,
+      "rate": 0.8421
+    },
+    "recall_at_10": {
+      "hits": 49,
+      "rate": 0.8596
+    },
+    "mrr_at_10": 0.6218
+  },
+  "by_lang": {
+    "el": {
+      "total": 30,
+      "recall_at_5": {
+        "hits": 24,
+        "rate": 0.8
+      },
+      "recall_at_10": {
+        "hits": 25,
+        "rate": 0.8333
+      },
+      "mrr_at_10": 0.6053
+    },
+    "en": {
+      "total": 27,
+      "recall_at_5": {
+        "hits": 24,
+        "rate": 0.8889
+      },
+      "recall_at_10": {
+        "hits": 24,
+        "rate": 0.8889
+      },
+      "mrr_at_10": 0.6401
+    }
+  },
+  "by_category": {
+    "cross_lingual": {
+      "total": 4,
+      "recall_at_5": {
+        "hits": 2,
+        "rate": 0.5
+      },
+      "recall_at_10": {
+        "hits": 2,
+        "rate": 0.5
+      },
+      "mrr_at_10": 0.375
+    },
+    "cross_medicine": {
+      "total": 4,
+      "recall_at_5": {
+        "hits": 1,
+        "rate": 0.25
+      },
+      "recall_at_10": {
+        "hits": 1,
+        "rate": 0.25
+      },
+      "mrr_at_10": 0.05
+    },
+    "interactions_contraindications": {
+      "total": 10,
+      "recall_at_5": {
+        "hits": 10,
+        "rate": 1.0
+      },
+      "recall_at_10": {
+        "hits": 10,
+        "rate": 1.0
+      },
+      "mrr_at_10": 0.7583
+    },
+    "patient_vs_professional": {
+      "total": 6,
+      "recall_at_5": {
+        "hits": 5,
+        "rate": 0.8333
+      },
+      "recall_at_10": {
+        "hits": 5,
+        "rate": 0.8333
+      },
+      "mrr_at_10": 0.6667
+    },
+    "side_effect_frequency": {
+      "total": 8,
+      "recall_at_5": {
+        "hits": 5,
+        "rate": 0.625
+      },
+      "recall_at_10": {
+        "hits": 6,
+        "rate": 0.75
+      },
+      "mrr_at_10": 0.401
+    },
+    "single_section": {
+      "total": 22,
+      "recall_at_5": {
+        "hits": 22,
+        "rate": 1.0
+      },
+      "recall_at_10": {
+        "hits": 22,
+        "rate": 1.0
+      },
+      "mrr_at_10": 0.7705
+    },
+    "wrong_premise": {
+      "total": 3,
+      "recall_at_5": {
+        "hits": 3,
+        "rate": 1.0
+      },
+      "recall_at_10": {
+        "hits": 3,
+        "rate": 1.0
+      },
+      "mrr_at_10": 0.6667
+    }
+  },
+  "per_question": [
+    {
+      "id": "dev-001",
+      "hit_rank": 2,
+      "retrieved": [
+        "aimovig:leaflet:3#1",
+        "aimovig:leaflet:1",
+        "aimovig:leaflet:2#1",
+        "aimovig:smpc:4.1",
+        "aimovig:leaflet:6#5",
+        "aimovig:leaflet:3#1",
+        "aimovig:smpc:4.2#1",
+        "aimovig:leaflet:2#2",
+        "aimovig:leaflet:1",
+        "aimovig:leaflet:2#1"
+      ]
+    },
+    {
+      "id": "dev-002",
+      "hit_rank": 2,
+      "retrieved": [
+        "tecfidera:leaflet:2#1",
+        "tecfidera:smpc:4.1",
+        "tecfidera:leaflet:1",
+        "tecfidera:leaflet:2#2",
+        "tecfidera:leaflet:2#3",
+        "tecfidera:smpc:4.4#5",
+        "tecfidera:smpc:4.8#10",
+        "tecfidera:smpc:4.8#3",
+        "tecfidera:leaflet:1",
+        "tecfidera:smpc:4.4#5"
+      ]
+    },
+    {
+      "id": "dev-003",
+      "hit_rank": 2,
+      "retrieved": [
+        "trulicity:leaflet:6#1",
+        "trulicity:leaflet:5",
+        "praluent:smpc:6.5",
+        "trulicity:smpc:6.6",
+        "trulicity:leaflet:6#11",
+        "comirnaty:smpc:6.3#2",
+        "trulicity:smpc:6.4",
+        "trulicity:leaflet:3#2",
+        "trulicity:leaflet:2#2",
+        "trulicity:leaflet:6#5"
+      ]
+    },
+    {
+      "id": "dev-004",
+      "hit_rank": 1,
+      "retrieved": [
+        "repatha:smpc:6.4",
+        "repatha:leaflet:6#3",
+        "repatha:leaflet:2#1",
+        "repatha:leaflet:3#2",
+        "repatha:leaflet:5",
+        "repatha:leaflet:2#1",
+        "repatha:smpc:6.3",
+        "repatha:smpc:4.2#2",
+        "repatha:leaflet:6#8",
+        "repatha:leaflet:6#3"
+      ]
+    },
+    {
+      "id": "dev-005",
+      "hit_rank": 1,
+      "retrieved": [
+        "forxiga:smpc:6.4",
+        "forxiga:leaflet:1#1",
+        "nubeqa:smpc:6.4",
+        "forxiga:leaflet:3",
+        "forxiga:leaflet:5",
+        "lyrica:smpc:6.4",
+        "herceptin:smpc:4.8#13",
+        "forxiga:leaflet:2#2",
+        "forxiga:leaflet:6#1",
+        "opdivo:leaflet:6#7"
+      ]
+    },
+    {
+      "id": "dev-006",
+      "hit_rank": 1,
+      "retrieved": [
+        "fasenra:smpc:6.4",
+        "fasenra:leaflet:3",
+        "fasenra:smpc:6.6",
+        "fasenra:leaflet:6#3",
+        "fasenra:leaflet:3",
+        "fasenra:leaflet:5",
+        "fasenra:leaflet:6#4",
+        "fasenra:leaflet:1#1",
+        "fasenra:leaflet:2#3",
+        "fasenra:leaflet:2#1"
+      ]
+    },
+    {
+      "id": "dev-007",
+      "hit_rank": 1,
+      "retrieved": [
+        "ibrance:leaflet:1",
+        "keytruda:leaflet:1#1",
+        "ibrance:leaflet:2#2",
+        "ibrance:smpc:4.1",
+        "ibrance:smpc:4.4#1",
+        "ibrance:leaflet:2#1",
+        "rinvoq:leaflet:2#4",
+        "ibrance:leaflet:1",
+        "ibrance:smpc:4.2#3",
+        "tagrisso:leaflet:1#1"
+      ]
+    },
+    {
+      "id": "dev-008",
+      "hit_rank": 2,
+      "retrieved": [
+        "shingrix:leaflet:2#1",
+        "shingrix:smpc:4.1",
+        "shingrix:smpc:5.1#14",
+        "shingrix:smpc:4.5",
+        "shingrix:leaflet:2#1",
+        "shingrix:smpc:5.1#2",
+        "shingrix:smpc:5.1#8",
+        "shingrix:smpc:5.1#15",
+        "shingrix:smpc:5.1#2",
+        "shingrix:leaflet:1"
+      ]
+    },
+    {
+      "id": "dev-009",
+      "hit_rank": 1,
+      "retrieved": [
+        "shingrix:smpc:4.2",
+        "shingrix:smpc:5.1#17",
+        "shingrix:leaflet:3",
+        "shingrix:smpc:5.1#10",
+        "shingrix:leaflet:2#1",
+        "shingrix:smpc:4.4#1",
+        "shingrix:smpc:4.5",
+        "shingrix:smpc:5.1#2",
+        "shingrix:smpc:5.1#12",
+        "shingrix:smpc:5.1#1"
+      ]
+    },
+    {
+      "id": "dev-010",
+      "hit_rank": 1,
+      "retrieved": [
+        "opdivo:leaflet:2#5",
+        "opdivo:leaflet:3#3",
+        "opdivo:leaflet:3#3",
+        "ocrevus:leaflet:2#5",
+        "opdivo:leaflet:6#1",
+        "opdivo:leaflet:2#4",
+        "opdivo:leaflet:3#2",
+        "opdivo:leaflet:2#6",
+        "opdivo:smpc:6.6#4",
+        "opdivo:leaflet:3#2"
+      ]
+    },
+    {
+      "id": "dev-011",
+      "hit_rank": 1,
+      "retrieved": [
+        "rinvoq:leaflet:2#4",
+        "enbrel:smpc:4.6#1",
+        "rinvoq:leaflet:1#3",
+        "rinvoq:leaflet:2#2",
+        "rinvoq:leaflet:2#3",
+        "rinvoq:smpc:4.1#1",
+        "rinvoq:leaflet:2#1",
+        "rinvoq:leaflet:2#6",
+        "tysabri:smpc:4.6",
+        "tecfidera:smpc:4.6"
+      ]
+    },
+    {
+      "id": "dev-012",
+      "hit_rank": 5,
+      "retrieved": [
+        "stelara:leaflet:2#3",
+        "stelara:leaflet:4#2",
+        "stelara:leaflet:2#4",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:1",
+        "stelara:leaflet:2#2",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:2#3",
+        "stelara:leaflet:4#3",
+        "stelara:smpc:6.6#1"
+      ]
+    },
+    {
+      "id": "dev-013",
+      "hit_rank": 1,
+      "retrieved": [
+        "tecfidera:leaflet:2#2",
+        "tecfidera:smpc:4.6",
+        "tecfidera:leaflet:1",
+        "opdivo:leaflet:2#4",
+        "rybelsus:leaflet:2#3",
+        "tecfidera:smpc:4.5#3",
+        "ozempic:leaflet:2#3",
+        "tecfidera:leaflet:2#1",
+        "brilique:leaflet:2#3",
+        "tecfidera:smpc:5.1#8"
+      ]
+    },
+    {
+      "id": "dev-014",
+      "hit_rank": 1,
+      "retrieved": [
+        "fasenra:leaflet:1#1",
+        "fasenra:leaflet:3",
+        "fasenra:leaflet:1#2",
+        "fasenra:leaflet:3",
+        "fasenra:smpc:4.2#1",
+        "fasenra:smpc:4.1",
+        "fasenra:leaflet:1#1",
+        "fasenra:leaflet:2#1",
+        "fasenra:smpc:4.2#2",
+        "opdivo:leaflet:3#5"
+      ]
+    },
+    {
+      "id": "dev-015",
+      "hit_rank": 1,
+      "retrieved": [
+        "pradaxa:leaflet:2#2",
+        "jardiance:leaflet:3#1",
+        "pradaxa:leaflet:3#1",
+        "pradaxa:leaflet:2#4",
+        "lyrica:leaflet:3#1",
+        "forxiga:leaflet:3",
+        "pradaxa:leaflet:3#3",
+        "pradaxa:leaflet:2#3",
+        "pradaxa:leaflet:1",
+        "brilique:leaflet:3#1"
+      ]
+    },
+    {
+      "id": "dev-016",
+      "hit_rank": 4,
+      "retrieved": [
+        "stelara:smpc:6.5",
+        "stelara:leaflet:2#3",
+        "stelara:leaflet:2#4",
+        "stelara:leaflet:5",
+        "stelara:leaflet:2#1",
+        "stelara:smpc:6.4",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:6#1",
+        "stelara:leaflet:3#1",
+        "stelara:smpc:6.6#1"
+      ]
+    },
+    {
+      "id": "dev-017",
+      "hit_rank": 2,
+      "retrieved": [
+        "comirnaty:smpc:6.3#1",
+        "opdivo:smpc:6.4",
+        "comirnaty:smpc:6.6#1",
+        "opdivo:leaflet:5",
+        "comirnaty:leaflet:6#4",
+        "opdivo:leaflet:6#7",
+        "ocrevus:smpc:6.4",
+        "comirnaty:smpc:6.3#2",
+        "opdivo:leaflet:3#3",
+        "comirnaty:leaflet:5#1"
+      ]
+    },
+    {
+      "id": "dev-018",
+      "hit_rank": 2,
+      "retrieved": [
+        "pradaxa:leaflet:3#1",
+        "pradaxa:leaflet:1",
+        "opdivo:smpc:4.1#2",
+        "pradaxa:leaflet:2#3",
+        "rinvoq:smpc:4.1#2",
+        "pradaxa:leaflet:3#2",
+        "pradaxa:leaflet:3#4",
+        "opdivo:smpc:4.1#3",
+        "pradaxa:leaflet:2#2",
+        "pradaxa:leaflet:3#1"
+      ]
+    },
+    {
+      "id": "dev-019",
+      "hit_rank": 2,
+      "retrieved": [
+        "repatha:leaflet:2#1",
+        "repatha:leaflet:1#2",
+        "repatha:leaflet:6#6",
+        "repatha:leaflet:6#3",
+        "repatha:smpc:4.1",
+        "repatha:leaflet:3#1",
+        "repatha:leaflet:6#3",
+        "repatha:smpc:2",
+        "repatha:leaflet:2#1",
+        "repatha:smpc:5.1#21"
+      ]
+    },
+    {
+      "id": "dev-020",
+      "hit_rank": 1,
+      "retrieved": [
+        "aimovig:leaflet:2#2",
+        "aimovig:leaflet:3#1",
+        "aimovig:leaflet:3#1",
+        "aimovig:leaflet:2#1",
+        "aimovig:smpc:4.6",
+        "aimovig:leaflet:2#1",
+        "aimovig:leaflet:6#7",
+        "aimovig:leaflet:3#2",
+        "aimovig:leaflet:1",
+        "aimovig:smpc:4.2#1"
+      ]
+    },
+    {
+      "id": "dev-021",
+      "hit_rank": 1,
+      "retrieved": [
+        "forxiga:leaflet:1#1",
+        "forxiga:leaflet:2#2",
+        "forxiga:smpc:4.1",
+        "jardiance:leaflet:1#1",
+        "forxiga:smpc:5.1#3",
+        "forxiga:leaflet:2#3",
+        "mounjaro:leaflet:4#2",
+        "forxiga:leaflet:2#1",
+        "mounjaro:leaflet:4#1",
+        "forxiga:smpc:4.1"
+      ]
+    },
+    {
+      "id": "dev-022",
+      "hit_rank": 1,
+      "retrieved": [
+        "pradaxa:leaflet:5",
+        "pradaxa:leaflet:3#1",
+        "pradaxa:smpc:6.4",
+        "pradaxa:smpc:6.6",
+        "pradaxa:leaflet:3#1",
+        "pradaxa:leaflet:6#4",
+        "pradaxa:leaflet:2#5",
+        "pradaxa:smpc:4.6",
+        "pradaxa:leaflet:3#4",
+        "pradaxa:leaflet:6#1"
+      ]
+    },
+    {
+      "id": "dev-023",
+      "hit_rank": 3,
+      "retrieved": [
+        "aimovig:leaflet:2#1",
+        "herceptin:smpc:4.8#3",
+        "aimovig:smpc:4.8#1",
+        "herceptin:smpc:4.8#2",
+        "eliquis:smpc:4.8#3",
+        "aimovig:leaflet:2#2",
+        "aimovig:leaflet:3#1",
+        "aimovig:smpc:4.2#1",
+        "tagrisso:smpc:4.8#3",
+        "aimovig:leaflet:4"
+      ]
+    },
+    {
+      "id": "dev-024",
+      "hit_rank": 1,
+      "retrieved": [
+        "ibrance:smpc:4.8#1",
+        "pradaxa:smpc:4.8#11",
+        "comirnaty:smpc:4.8#19",
+        "ibrance:leaflet:4#1",
+        "opdivo:smpc:4.8#56",
+        "ibrance:leaflet:2#2",
+        "eliquis:smpc:4.8#4",
+        "ibrance:leaflet:1",
+        "eliquis:smpc:4.8#5",
+        "ibrance:smpc:6.2"
+      ]
+    },
+    {
+      "id": "dev-025",
+      "hit_rank": 4,
+      "retrieved": [
+        "fasenra:leaflet:1#2",
+        "herceptin:smpc:4.8#3",
+        "fasenra:leaflet:1#1",
+        "fasenra:smpc:4.8#2",
+        "herceptin:smpc:4.8#2",
+        "fasenra:leaflet:2#1",
+        "fasenra:leaflet:3",
+        "nubeqa:leaflet:4",
+        "fasenra:smpc:4.1",
+        "tagrisso:smpc:4.8#3"
+      ]
+    },
+    {
+      "id": "dev-026",
+      "hit_rank": null,
+      "retrieved": [
+        "enbrel:smpc:4.8#7",
+        "shingrix:smpc:5.1#10",
+        "shingrix:smpc:5.1#14",
+        "shingrix:leaflet:1#1",
+        "humira:leaflet:3#1",
+        "shingrix:smpc:5.1#2",
+        "shingrix:leaflet:2#1",
+        "shingrix:leaflet:2#1",
+        "enbrel:leaflet:4#3",
+        "cosentyx:leaflet:6#6"
+      ]
+    },
+    {
+      "id": "dev-027",
+      "hit_rank": 2,
+      "retrieved": [
+        "herceptin:smpc:4.8#3",
+        "stelara:leaflet:4#2",
+        "herceptin:smpc:4.8#2",
+        "stelara:smpc:4.8#1",
+        "stelara:leaflet:4#1",
+        "nubeqa:leaflet:4",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:2#3",
+        "eliquis:smpc:4.8#3",
+        "stelara:leaflet:6#5"
+      ]
+    },
+    {
+      "id": "dev-028",
+      "hit_rank": 1,
+      "retrieved": [
+        "opdivo:leaflet:4#1",
+        "opdivo:smpc:4.8#68",
+        "opdivo:smpc:4.8#66",
+        "eylea:smpc:4.8#2",
+        "comirnaty:smpc:4.8#19",
+        "opdivo:leaflet:6#10",
+        "opdivo:smpc:4.8#1",
+        "opdivo:smpc:4.8#56",
+        "praluent:leaflet:4#2",
+        "entresto:smpc:4.8#2"
+      ]
+    },
+    {
+      "id": "dev-029",
+      "hit_rank": null,
+      "retrieved": [
+        "trulicity:leaflet:2#1",
+        "nubeqa:leaflet:4",
+        "trulicity:smpc:5.1#19",
+        "shingrix:leaflet:4",
+        "dupixent:leaflet:4",
+        "trulicity:smpc:4.7",
+        "victoza:leaflet:4#2",
+        "trulicity:leaflet:2#2",
+        "eliquis:leaflet:4#1",
+        "praluent:leaflet:4"
+      ]
+    },
+    {
+      "id": "dev-030",
+      "hit_rank": 8,
+      "retrieved": [
+        "rinvoq:leaflet:1#4",
+        "comirnaty:smpc:4.8#18",
+        "nubeqa:leaflet:4#1",
+        "comirnaty:smpc:4.8#19",
+        "rinvoq:leaflet:6#6",
+        "repatha:smpc:4.8#4",
+        "shingrix:smpc:4.8#4",
+        "rinvoq:smpc:4.8#3",
+        "repatha:smpc:4.8#5",
+        "lyrica:smpc:4.8#1"
+      ]
+    },
+    {
+      "id": "dev-031",
+      "hit_rank": 2,
+      "retrieved": [
+        "pradaxa:leaflet:3#1",
+        "pradaxa:leaflet:2#1",
+        "pradaxa:leaflet:3#3",
+        "pradaxa:leaflet:2#4",
+        "pradaxa:leaflet:2#2",
+        "pradaxa:leaflet:1",
+        "pradaxa:leaflet:3#1",
+        "pradaxa:leaflet:2#3",
+        "eliquis:smpc:4.2#1",
+        "pradaxa:smpc:4.5#1"
+      ]
+    },
+    {
+      "id": "dev-032",
+      "hit_rank": 1,
+      "retrieved": [
+        "ibrance:leaflet:3",
+        "ibrance:leaflet:2#1",
+        "ibrance:smpc:4.2#5",
+        "ibrance:leaflet:2#1",
+        "ibrance:leaflet:2#3",
+        "ibrance:leaflet:6#1",
+        "ibrance:smpc:2",
+        "ibrance:leaflet:3",
+        "ibrance:leaflet:6#4",
+        "ibrance:leaflet:2#4"
+      ]
+    },
+    {
+      "id": "dev-033",
+      "hit_rank": 1,
+      "retrieved": [
+        "ibrance:leaflet:2#1",
+        "ibrance:smpc:4.2#4",
+        "ibrance:smpc:4.4#1",
+        "ibrance:leaflet:3",
+        "ibrance:leaflet:6#1",
+        "ibrance:leaflet:2#2",
+        "ibrance:smpc:4.1",
+        "ibrance:smpc:4.4#2",
+        "ibrance:leaflet:3",
+        "ibrance:leaflet:1"
+      ]
+    },
+    {
+      "id": "dev-034",
+      "hit_rank": 1,
+      "retrieved": [
+        "stelara:leaflet:2#3",
+        "stelara:leaflet:2#4",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:2#3",
+        "stelara:smpc:4.4#5",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:2#2",
+        "stelara:smpc:4.4#4",
+        "stelara:leaflet:1",
+        "stelara:smpc:6.6#1"
+      ]
+    },
+    {
+      "id": "dev-035",
+      "hit_rank": 1,
+      "retrieved": [
+        "tecfidera:smpc:4.5#1",
+        "stelara:smpc:4.4#3",
+        "tecfidera:leaflet:2#2",
+        "tecfidera:leaflet:2#1",
+        "tecfidera:smpc:4.4#5",
+        "remicade:smpc:4.4#6",
+        "tecfidera:leaflet:1",
+        "tecfidera:smpc:4.8#3",
+        "tecfidera:smpc:4.4#4",
+        "ocrevus:smpc:4.4#5"
+      ]
+    },
+    {
+      "id": "dev-036",
+      "hit_rank": 4,
+      "retrieved": [
+        "rinvoq:leaflet:1#6",
+        "rinvoq:smpc:4.1#1",
+        "rinvoq:leaflet:1#4",
+        "rinvoq:leaflet:2#1",
+        "rinvoq:leaflet:2#2",
+        "rinvoq:smpc:4.1#1",
+        "rinvoq:leaflet:2#3",
+        "rinvoq:leaflet:1#5",
+        "rinvoq:leaflet:6#2",
+        "rinvoq:leaflet:2#4"
+      ]
+    },
+    {
+      "id": "dev-037",
+      "hit_rank": 1,
+      "retrieved": [
+        "trulicity:leaflet:2#2",
+        "victoza:leaflet:2#2",
+        "trulicity:smpc:4.7",
+        "trulicity:smpc:5.1#9",
+        "trulicity:leaflet:1",
+        "jardiance:leaflet:4#1",
+        "trulicity:leaflet:2#1",
+        "trulicity:leaflet:3#2",
+        "humira:leaflet:4#4",
+        "trulicity:smpc:4.2#1"
+      ]
+    },
+    {
+      "id": "dev-038",
+      "hit_rank": 2,
+      "retrieved": [
+        "tecfidera:smpc:4.4#7",
+        "tecfidera:leaflet:2#4",
+        "tecfidera:leaflet:1",
+        "tecfidera:leaflet:2#3",
+        "tecfidera:smpc:4.4#5",
+        "tecfidera:smpc:4.6#1",
+        "tecfidera:leaflet:5",
+        "tagrisso:leaflet:2#3",
+        "tecfidera:leaflet:2#1",
+        "tecfidera:smpc:4.2#1"
+      ]
+    },
+    {
+      "id": "dev-039",
+      "hit_rank": 1,
+      "retrieved": [
+        "stelara:leaflet:2#3",
+        "stelara:smpc:4.3",
+        "stelara:leaflet:2#4",
+        "stelara:leaflet:4#2",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:2#2",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:1",
+        "stelara:smpc:4.8#1",
+        "stelara:smpc:6.6#1"
+      ]
+    },
+    {
+      "id": "dev-040",
+      "hit_rank": 3,
+      "retrieved": [
+        "rinvoq:leaflet:1#4",
+        "rinvoq:leaflet:6#6",
+        "rinvoq:leaflet:2#3",
+        "rinvoq:leaflet:2#2",
+        "rinvoq:leaflet:1#3",
+        "rinvoq:leaflet:1#3",
+        "rinvoq:leaflet:1#1",
+        "rinvoq:leaflet:6#2",
+        "rinvoq:leaflet:2#1",
+        "rinvoq:leaflet:2#5"
+      ]
+    },
+    {
+      "id": "dev-041",
+      "hit_rank": 2,
+      "retrieved": [
+        "repatha:leaflet:3#1",
+        "repatha:leaflet:5",
+        "repatha:leaflet:2#1",
+        "repatha:leaflet:6#3",
+        "repatha:smpc:6.4",
+        "victoza:leaflet:6#3",
+        "repatha:smpc:6.3",
+        "praluent:leaflet:3#1",
+        "repatha:smpc:6.6",
+        "remicade:leaflet:6#4"
+      ]
+    },
+    {
+      "id": "dev-042",
+      "hit_rank": 1,
+      "retrieved": [
+        "trulicity:leaflet:3#2",
+        "trulicity:smpc:4.2#1",
+        "trulicity:leaflet:5",
+        "trulicity:leaflet:2#2",
+        "trulicity:leaflet:2#2",
+        "trulicity:leaflet:1",
+        "trulicity:leaflet:3#1",
+        "trulicity:leaflet:6#1",
+        "trulicity:leaflet:6#1",
+        "trulicity:leaflet:6#12"
+      ]
+    },
+    {
+      "id": "dev-043",
+      "hit_rank": 1,
+      "retrieved": [
+        "rinvoq:leaflet:2#3",
+        "rinvoq:leaflet:3#2",
+        "rinvoq:leaflet:2#1",
+        "rinvoq:smpc:4.2#6",
+        "rinvoq:leaflet:1#3",
+        "rinvoq:leaflet:2#4",
+        "rinvoq:smpc:4.1#1",
+        "rinvoq:leaflet:2#2",
+        "rinvoq:leaflet:6#4",
+        "rinvoq:leaflet:1#1"
+      ]
+    },
+    {
+      "id": "dev-044",
+      "hit_rank": 2,
+      "retrieved": [
+        "forxiga:leaflet:1#1",
+        "forxiga:smpc:4.1",
+        "forxiga:leaflet:2#3",
+        "forxiga:leaflet:1#1",
+        "mounjaro:leaflet:4#2",
+        "forxiga:smpc:5.1#3",
+        "forxiga:leaflet:2#2",
+        "forxiga:leaflet:3#2",
+        "forxiga:leaflet:3",
+        "forxiga:smpc:5.1#4"
+      ]
+    },
+    {
+      "id": "dev-045",
+      "hit_rank": null,
+      "retrieved": [
+        "trulicity:leaflet:2#1",
+        "trulicity:leaflet:3#2",
+        "trulicity:leaflet:2#2",
+        "ozempic:leaflet:4#1",
+        "tecfidera:leaflet:4#2",
+        "tysabri:leaflet:4#2",
+        "victoza:leaflet:4#2",
+        "trulicity:leaflet:3#2",
+        "trulicity:smpc:4.7",
+        "trulicity:smpc:5.1#19"
+      ]
+    },
+    {
+      "id": "dev-046",
+      "hit_rank": 1,
+      "retrieved": [
+        "aimovig:leaflet:3#1",
+        "aimovig:leaflet:2#2",
+        "aimovig:smpc:4.2#2",
+        "aimovig:leaflet:3#1",
+        "aimovig:leaflet:2#1",
+        "aimovig:leaflet:1",
+        "aimovig:leaflet:2#1",
+        "aimovig:leaflet:6#1",
+        "aimovig:leaflet:6#7",
+        "aimovig:leaflet:3#2"
+      ]
+    },
+    {
+      "id": "dev-047",
+      "hit_rank": null,
+      "retrieved": [
+        "forxiga:leaflet:1#1",
+        "trulicity:smpc:6.4",
+        "forxiga:leaflet:6#1",
+        "forxiga:smpc:7",
+        "forxiga:leaflet:3",
+        "forxiga:leaflet:1#2",
+        "trulicity:leaflet:2#2",
+        "trulicity:leaflet:1",
+        "forxiga:leaflet:2#3",
+        "trulicity:smpc:5.1#19"
+      ]
+    },
+    {
+      "id": "dev-048",
+      "hit_rank": null,
+      "retrieved": [
+        "stelara:leaflet:2#3",
+        "stelara:leaflet:4#2",
+        "stelara:leaflet:2#4",
+        "stelara:leaflet:2#1",
+        "stelara:leaflet:6#1",
+        "stelara:leaflet:2#2",
+        "stelara:leaflet:2#1",
+        "rinvoq:leaflet:1#4",
+        "rinvoq:leaflet:1#3",
+        "rinvoq:leaflet:1#1"
+      ]
+    },
+    {
+      "id": "dev-049",
+      "hit_rank": 5,
+      "retrieved": [
+        "pradaxa:smpc:6",
+        "repatha:leaflet:2#1",
+        "repatha:leaflet:6#3",
+        "repatha:smpc:4.3",
+        "pradaxa:leaflet:2#2",
+        "repatha:leaflet:3#1",
+        "pradaxa:smpc:4",
+        "repatha:leaflet:3#2",
+        "pradaxa:leaflet:1",
+        "pradaxa:smpc:5"
+      ]
+    },
+    {
+      "id": "dev-050",
+      "hit_rank": null,
+      "retrieved": [
+        "fasenra:smpc:6.6",
+        "aimovig:leaflet:3#1",
+        "fasenra:leaflet:6#3",
+        "aimovig:leaflet:2#1",
+        "fasenra:leaflet:6#1",
+        "fasenra:leaflet:3",
+        "fasenra:leaflet:1#1",
+        "fasenra:leaflet:2#3",
+        "fasenra:leaflet:3",
+        "aimovig:leaflet:3#1"
+      ]
+    },
+    {
+      "id": "dev-051",
+      "hit_rank": 1,
+      "retrieved": [
+        "pradaxa:leaflet:1",
+        "tagrisso:leaflet:2#3",
+        "ibrance:leaflet:2#3",
+        "ibrance:leaflet:1",
+        "imfinzi:leaflet:1#2",
+        "rinvoq:leaflet:1#4",
+        "pradaxa:leaflet:2#2",
+        "imfinzi:leaflet:1#1",
+        "entresto:leaflet:2#4",
+        "pradaxa:leaflet:6#4"
+      ]
+    },
+    {
+      "id": "dev-052",
+      "hit_rank": null,
+      "retrieved": [
+        "shingrix:smpc:6.6#1",
+        "shingrix:leaflet:2#2",
+        "comirnaty:smpc:6.3#3",
+        "shingrix:smpc:4.5",
+        "shingrix:leaflet:6#4",
+        "shingrix:leaflet:3",
+        "shingrix:leaflet:6#5",
+        "comirnaty:smpc:6.3#1",
+        "comirnaty:leaflet:2#3",
+        "comirnaty:leaflet:5#1"
+      ]
+    },
+    {
+      "id": "dev-053",
+      "hit_rank": 2,
+      "retrieved": [
+        "comirnaty:smpc:4.8#19",
+        "forxiga:smpc:4.8#17",
+        "comirnaty:smpc:4.8#18",
+        "forxiga:smpc:4.4#1",
+        "forxiga:smpc:4.6",
+        "nubeqa:leaflet:4#1",
+        "shingrix:smpc:4.8#4",
+        "forxiga:smpc:5.1#1",
+        "lyrica:smpc:4.8#1",
+        "forxiga:smpc:5.3#1"
+      ]
+    },
+    {
+      "id": "dev-054",
+      "hit_rank": null,
+      "retrieved": [
+        "aimovig:smpc:5.3#2",
+        "opdivo:leaflet:3#5",
+        "aimovig:smpc:5.3#1",
+        "opdivo:leaflet:3#6",
+        "aimovig:smpc:4.8#3",
+        "rybelsus:leaflet:6#1",
+        "aimovig:smpc:4.4#1",
+        "herceptin:leaflet:3#1",
+        "aimovig:smpc:5.2#2",
+        "ibrance:smpc:3"
+      ]
+    },
+    {
+      "id": "dev-055",
+      "hit_rank": 2,
+      "retrieved": [
+        "forxiga:leaflet:1#1",
+        "forxiga:smpc:6.4",
+        "forxiga:leaflet:2#3",
+        "forxiga:leaflet:3",
+        "forxiga:leaflet:6#1",
+        "forxiga:leaflet:5",
+        "forxiga:leaflet:1#2",
+        "comirnaty:smpc:6.3#2",
+        "cosentyx:smpc:6.4",
+        "forxiga:leaflet:1#1"
+      ]
+    },
+    {
+      "id": "dev-056",
+      "hit_rank": 1,
+      "retrieved": [
+        "aimovig:leaflet:1",
+        "aimovig:leaflet:3#1",
+        "aimovig:smpc:4.2#1",
+        "aimovig:leaflet:3#1",
+        "aimovig:smpc:5.1#1",
+        "aimovig:leaflet:2#1",
+        "aimovig:leaflet:2#1",
+        "aimovig:smpc:4.1",
+        "aimovig:leaflet:2#2",
+        "aimovig:smpc:5.1#8"
+      ]
+    },
+    {
+      "id": "dev-057",
+      "hit_rank": 2,
+      "retrieved": [
+        "shingrix:leaflet:2#1",
+        "shingrix:leaflet:3",
+        "shingrix:leaflet:6#4",
+        "shingrix:smpc:4.2",
+        "shingrix:smpc:5.1#17",
+        "shingrix:leaflet:1",
+        "shingrix:smpc:5.1#1",
+        "shingrix:leaflet:2#1",
+        "shingrix:smpc:5.1#11",
+        "shingrix:smpc:5.1#2"
+      ]
+    }
+  ]
+}

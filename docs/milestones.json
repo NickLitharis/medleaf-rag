@@ -35,7 +35,8 @@
         "Full rebuild on an isolated Qdrant container: 8797 points, 0 missing sources, split_sections=891, missing_metadata=0, ~63 min on 16 CPU cores. `medleaf index window-report --json` on the stored collection: over_window=0, worst chunk exactly 496 tokens. Evidence: docs/m2-window-report.json.",
         "Acceptance: all ten sample questions put the expected SmPC section in the top 5 (5 EN, 5 EL), identical through the live API curl run (.tmp/repair-curl-evidence.sh) and tests/test_m2_corpus_index.py (17 passed against the real index). M1 corpus tests still pass (18 passed). Full gated suite: 101 passed, 1 skipped (parser perf smoke needs MEDLEAF_SMOKE_PDF); ruff clean.",
         "Diagnosed the 5/10 vs 8/10 discrepancy: on Windows the Greek question was passed as a curl command-line argument and every non-ASCII byte became '?', so the API echoed a corrupted query ('???e? e??a? ?? a?te?de??e?? t?? Eliquis;'). The repaired evidence pipes the query through stdin (--data-urlencode query@-) and the API echoes the real UTF-8 question. The 8/10 Python rerun was the truthful signal.",
-        "Negative control: removing the stopword filter fails test_query_sparse_vector_drops_function_words, which passes again once restored."
+        "Negative control: removing the stopword filter fails test_query_sparse_vector_drops_function_words, which passes again once restored.",
+        "CI: GitHub Actions run 38773608385 on commit 690e1cd (lint + fast tests) completed with conclusion success. https://github.com/NickLitharis/medleaf-rag/actions/runs/38773608385"
       ],
       "remaining_gates": [
         "Chunk parts of a split long section are per language: the logical chunk_id covers the section, but part boundaries differ between Greek and English because the text lengths differ (recorded per section in split_sections).",

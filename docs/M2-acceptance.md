@@ -178,6 +178,7 @@ returns only `eliquis`; the language-filter test fails if `build_filter` ignores
 | Full gated suite (`MEDLEAF_M1_CORPUS=1`, `MEDLEAF_M2_CORPUS=1`, real Qdrant) | **101 passed, 1 skipped** in 219.59s |
 | `tests/test_m2_boundaries.py` (new) | 4 synthetic boundary/contents/fallback cases + opt-in 40-medicine coverage |
 | Negative control | removing the stopword filter fails `test_query_sparse_vector_drops_function_words`, then passes once restored |
+| GitHub Actions | run 38773608385 on `690e1cd` — completed / **success** (lint + fast tests) |
 | mypy | pre-existing `fitz`/`yaml` stub and `ema.py:240` errors are unchanged; they are recorded, not hidden |
 
 ## 8. Not claimed / limitations

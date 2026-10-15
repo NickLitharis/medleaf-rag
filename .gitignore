@@ -1,0 +1,33 @@
+# Corpus: downloaded PDFs are reproducible from data/medicines.yaml, never committed.
+data/raw/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# Environment and local working data
+.env
+.env.*
+!.env.example
+.tmp/
+.deepeval/
+.coverage*
+htmlcov/
+
+# Eval outputs (the latest summary is committed separately, see SPEC 15)
+eval/results/
+!eval/results/.gitkeep
+
+# OS / editor
+.Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

@@ -1,0 +1,62 @@
+[project]
+name = "medleaf-rag"
+version = "0.1.0"
+description = "Bilingual (Greek/English) RAG question answering over official EU medicine information, with citations and medical safety guardrails."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Nikos Litharis" }]
+dependencies = [
+    "pydantic>=2.7",
+    "pydantic-settings>=2.2",
+    "PyMuPDF>=1.24",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27",
+    "mypy>=1.10",
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+medleaf = "medleaf.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/medleaf"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+    "network: test that downloads from ema.europa.eu (deselect with '-m \"not network\"')",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "DTZ", "T20", "SIM", "PTH", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["T20"]
+# CLI entry points print their reports by design.
+"src/medleaf/cli.py" = ["T20"]
+"src/medleaf/ingest/ema.py" = ["T20"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src", "tests"]
+mypy_path = "src"
+warn_unreachable = true

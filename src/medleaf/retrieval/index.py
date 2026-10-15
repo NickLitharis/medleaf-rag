@@ -47,6 +47,15 @@ class IndexMissingError(RuntimeError):
     """The index does not exist, is empty, or its manifest cannot be read."""
 
 
+class IndexIncompleteError(IndexMissingError):
+    """The collection holds a different number of points than the manifest records.
+
+    A full build drops the collection first and writes the manifest last, so a build
+    that is still running (or that died) leaves a partial collection next to the
+    previous build's manifest. Serving it would answer from part of the corpus.
+    """
+
+
 class RetrievalUnavailableError(RuntimeError):
     """The retrieval service (Qdrant) cannot be reached."""
 
@@ -235,6 +244,45 @@ def ensure_collection(
     return True
 
 
+def build_collection_name(served: str, now: datetime | None = None) -> str:
+    """Physical collection a full build fills before ``served`` is pointed at it."""
+    stamp = (now or datetime.now(UTC)).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"{served}_{stamp}"
+
+
+def alias_target(client: QdrantClient, alias: str) -> str | None:
+    """Physical collection behind ``alias``, or ``None`` when no such alias exists."""
+    for entry in client.get_aliases().aliases:
+        if entry.alias_name == alias:
+            return entry.collection_name
+    return None
+
+
+def point_alias(client: QdrantClient, *, alias: str, collection: str) -> str | None:
+    """Atomically point ``alias`` at ``collection``; return the collection it left, if any.
+
+    Readers keep using the alias name throughout, so they see the old index until the
+    switch and the new one after it — never a half-built collection. A real collection
+    still carrying the alias name (the pre-alias layout) is deleted first, because Qdrant
+    refuses an alias that shadows a collection; that one-time migration is the only gap.
+    """
+    previous = alias_target(client, alias)
+    operations: list[models.AliasOperations] = []
+    if previous is not None:
+        operations.append(
+            models.DeleteAliasOperation(delete_alias=models.DeleteAlias(alias_name=alias))
+        )
+    elif client.collection_exists(alias):
+        client.delete_collection(alias)
+    operations.append(
+        models.CreateAliasOperation(
+            create_alias=models.CreateAlias(collection_name=collection, alias_name=alias)
+        )
+    )
+    client.update_collection_aliases(change_aliases_operations=operations)
+    return previous if previous != collection else None
+
+
 def upsert_sections(
     client: QdrantClient,
     *,
@@ -371,16 +419,40 @@ def collection_count(
     )
 
 
-def require_index(client: QdrantClient, *, collection: str, corpus_version: str | None) -> None:
-    """Raise :class:`IndexMissingError` unless a non-empty index is present."""
+def require_index(
+    client: QdrantClient,
+    *,
+    collection: str,
+    corpus_version: str | None,
+    expected_points: int | None = None,
+) -> None:
+    """Raise :class:`IndexMissingError` unless a non-empty index is present.
+
+    With ``expected_points`` (the manifest's ``total_chunks``), a collection holding any
+    other number of points raises :class:`IndexIncompleteError`.
+    """
     if not client.collection_exists(collection):
         msg = f"collection {collection!r} does not exist; run `medleaf index build`"
         raise IndexMissingError(msg)
+    if expected_points is not None:
+        check_complete(client, collection=collection, expected_points=expected_points)
     query_filter = build_filter(corpus_version=corpus_version)
     if collection_count(client, collection=collection, query_filter=query_filter) == 0:
         detail = f" (corpus_version={corpus_version!r})" if corpus_version else ""
         msg = f"collection {collection!r} has no points{detail}; run `medleaf index build`"
         raise IndexMissingError(msg)
+
+
+def check_complete(client: QdrantClient, *, collection: str, expected_points: int) -> int:
+    """Return the point count, raising :class:`IndexIncompleteError` on a mismatch."""
+    points = collection_count(client, collection=collection)
+    if points != expected_points:
+        msg = (
+            f"collection {collection!r} has {points} points but the manifest records "
+            f"{expected_points}; an index build is running or did not finish"
+        )
+        raise IndexIncompleteError(msg)
+    return points
 
 
 def write_manifest(path: Path, manifest: IndexManifest) -> None:
@@ -448,11 +520,15 @@ __all__ = [
     "DEFAULT_PREFETCH_LIMIT",
     "MANIFEST_SCHEMA_VERSION",
     "POINT_NAMESPACE",
+    "IndexIncompleteError",
     "IndexManifest",
     "IndexMissingError",
     "RetrievalUnavailableError",
+    "alias_target",
+    "build_collection_name",
     "build_filter",
     "build_manifest",
+    "check_complete",
     "collection_count",
     "corpus_sha256",
     "corpus_version_for",
@@ -463,6 +539,7 @@ __all__ = [
     "medicine_metadata",
     "missing_metadata",
     "payload_for",
+    "point_alias",
     "point_id",
     "require_index",
     "set_medicine_metadata",

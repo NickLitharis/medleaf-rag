@@ -1,4 +1,4 @@
-"""Bounded real-PDF smoke test for both parsers. Skipped by default.
+"""Bounded real-PDF smoke test for the ingest parser. Skipped by default.
 
 The check is opt-in so a normal test run never pays for a full 300-page parse. Run it
 with a hard external timeout and a real file from the local corpus, e.g.::
@@ -6,7 +6,7 @@ with a hard external timeout and a real file from the local corpus, e.g.::
     MEDLEAF_SMOKE_PDF=.tmp/raw/xarelto_el.pdf timeout 300 \\
         python -m pytest tests/test_parser_perf_smoke.py -q -s
 
-It asserts that both implementations still find SmPC 4.8, that table detection ran, and
+It asserts that the parser still finds SmPC 4.8, that table detection ran, and
 that it ran on far fewer pages than the file has.
 """
 
@@ -20,7 +20,6 @@ import fitz
 import pytest
 from pydantic import HttpUrl
 
-from medleaf import parse as legacy_parse
 from medleaf.ingest.chunk import is_frequency_line
 from medleaf.ingest.pipeline import parse_pdf
 from medleaf.models import DocKind, DocumentRef, Lang, Medicine
@@ -89,21 +88,8 @@ def test_real_large_pdf_parses_within_budget(monkeypatch: pytest.MonkeyPatch) ->
         f"4.8 frequency lines={frequency_lines}, table-detector pages={pipeline_detector_pages}"
     )
 
-    legacy_started = time.perf_counter()
-    legacy = legacy_parse.parse_document(path, doc="smpc", lang=lang.value)
-    legacy_elapsed = time.perf_counter() - legacy_started
-    legacy_pages = legacy.pages_with_tables()
-    print(
-        f"smoke: legacy {path.name} parsed in {legacy_elapsed:.1f}s -> "
-        f"4.8 present={legacy.section('4.8') is not None}, "
-        f"pages_with_tables={len(legacy_pages)} of {legacy.page_count}"
-    )
-
     assert any(number.startswith("4.1") for number in numbers), f"missing SmPC 4.1 in {numbers}"
     assert any(number.startswith("4.8") for number in numbers), f"missing SmPC 4.8 in {numbers}"
     assert pipeline_detector_pages, "pipeline table detection never ran"
     assert elapsed < _MAX_SECONDS, f"parse took {elapsed:.1f}s (budget {_MAX_SECONDS:.0f}s)"
 
-    assert legacy.section("4.8") is not None
-    assert legacy_pages, "legacy table detection never found a table page"
-    assert len(legacy_pages) < legacy.page_count, "legacy detector scanned every page"

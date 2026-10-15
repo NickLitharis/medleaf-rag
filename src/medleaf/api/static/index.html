@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MedLeaf Search</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5d6673; --border: #d9dee5;
+    --accent: #1f6feb; --accent-text: #ffffff; --ok: #1a7f37; --bad: #cf222e; --chip: #eef1f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #9aa4b2; --border: #2b323c;
+      --accent: #4c8dff; --accent-text: #0f1216; --ok: #3fb950; --bad: #ff6b6b; --chip: #222831;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; }
+  .status { font-size: 13px; color: var(--muted); }
+  .status b.ok { color: var(--ok); } .status b.bad { color: var(--bad); }
+  form { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+         padding: 16px; margin: 16px 0; display: grid; gap: 12px; }
+  .row { display: flex; gap: 8px; }
+  .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  label { font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+  input, select, button { font: inherit; color: var(--text); background: var(--bg);
+         border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+  input[type=search] { flex: 1; }
+  button { background: var(--accent); color: var(--accent-text); border: 0; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: wait; }
+  .meta { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .error { border: 1px solid var(--bad); color: var(--bad); border-radius: 8px; padding: 10px 12px; }
+  .hit { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+         padding: 14px 16px; margin-bottom: 10px; }
+  .hit h2 { font-size: 16px; margin: 0 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 1px 9px; font-size: 12px; color: var(--muted); }
+  .text { white-space: pre-wrap; margin: 0; overflow-wrap: anywhere; }
+  .text.clamped { max-height: 9.5em; overflow: hidden;
+         -webkit-mask-image: linear-gradient(#000 70%, transparent); mask-image: linear-gradient(#000 70%, transparent); }
+  .hit footer { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+         font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .hit a { color: var(--accent); }
+  .linkish { background: none; color: var(--accent); padding: 0; font-weight: 400; font-size: 12px; }
+  .note { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>MedLeaf Search</h1>
+    <span class="status" id="status">checking index…</span>
+  </header>
+
+  <form id="form">
+    <div class="row">
+      <input type="search" id="query" placeholder="e.g. contraindications, ναυτία, use in pregnancy" required autofocus>
+      <button id="go" type="submit">Search</button>
+    </div>
+    <div class="filters">
+      <label>Medicine
+        <select id="medicine"><option value="">All medicines</option></select>
+      </label>
+      <label>Language
+        <select id="lang"><option value="">Both</option><option value="en">English</option><option value="el">Greek</option></select>
+      </label>
+      <label>Document
+        <select id="doc"><option value="">Both</option><option value="smpc">SmPC (prescriber)</option><option value="leaflet">Package leaflet</option></select>
+      </label>
+      <label>Results
+        <select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
+      </label>
+    </div>
+    <span class="note">Tip: pick a medicine for the most precise answers. The first search after a restart loads the model and can take about a minute.</span>
+  </form>
+
+  <section id="out" aria-live="polite"></section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "class") node.className = value; else node.setAttribute(key, value);
+  }
+  for (const child of children) node.append(child);
+  return node;
+}
+
+async function loadStatus() {
+  try {
+    const response = await fetch("/readyz");
+    const state = await response.json();
+    $("status").replaceChildren(
+      el("b", { class: state.ready ? "ok" : "bad" }, state.ready ? "ready" : "not ready"),
+      ` · ${state.detail}`
+    );
+  } catch (error) {
+    $("status").replaceChildren(el("b", { class: "bad" }, "API unreachable"));
+  }
+}
+
+async function loadMedicines() {
+  try {
+    const response = await fetch("/v1/medicines");
+    if (!response.ok) return;
+    for (const item of await response.json()) {
+      const label = item.active_substance ? `${item.slug} (${item.active_substance})` : item.slug;
+      $("medicine").append(el("option", { value: item.slug }, label));
+    }
+  } catch (error) { /* the dropdown just stays at "All medicines" */ }
+}
+
+function renderHit(hit) {
+  const text = el("p", { class: "text clamped" }, hit.text);
+  const toggle = el("button", { class: "linkish", type: "button" }, "show more");
+  toggle.addEventListener("click", () => {
+    const clamped = text.classList.toggle("clamped");
+    toggle.textContent = clamped ? "show more" : "show less";
+  });
+  return el("article", { class: "hit" },
+    el("h2", {}, `${hit.rank}. ${hit.title}`),
+    el("div", { class: "chips" },
+      el("span", { class: "chip" }, hit.medicine),
+      el("span", { class: "chip" }, hit.doc === "smpc" ? "SmPC" : "Leaflet"),
+      el("span", { class: "chip" }, `section ${hit.section}`),
+      el("span", { class: "chip" }, hit.lang.toUpperCase()),
+      el("span", { class: "chip" }, `score ${hit.score.toFixed(3)}`)),
+    text,
+    el("footer", {},
+      toggle,
+      el("span", {}, `${hit.chunk_id} · revised ${hit.revision_date || "n/a"} · `,
+        el("a", { href: hit.source_url, target: "_blank", rel: "noopener" }, "EMA source PDF"))));
+}
+
+async function search(event) {
+  event.preventDefault();
+  const params = new URLSearchParams({ query: $("query").value.trim(), limit: $("limit").value });
+  for (const id of ["medicine", "lang", "doc"]) if ($(id).value) params.set(id, $(id).value);
+  $("go").disabled = true;
+  $("out").replaceChildren(el("p", { class: "meta" }, "Searching…"));
+  try {
+    const response = await fetch(`/v1/search?${params}`);
+    const body = await response.json();
+    if (!response.ok) {
+      const detail = body.detail;
+      const message = typeof detail === "string" ? detail
+        : detail && detail.detail ? `${detail.error}: ${detail.detail}` : JSON.stringify(detail);
+      $("out").replaceChildren(el("div", { class: "error" }, `Error ${response.status} — ${message}`));
+      return;
+    }
+    const meta = el("p", { class: "meta" },
+      `${body.count} result(s) in ${Math.round(body.latency_ms)} ms · ${body.corpus_version}`);
+    $("out").replaceChildren(meta, ...body.results.map(renderHit));
+    if (!body.count) $("out").append(el("p", { class: "meta" }, "No matches. Try fewer filters or other words."));
+  } catch (error) {
+    $("out").replaceChildren(el("div", { class: "error" }, `Request failed: ${error}`));
+  } finally {
+    $("go").disabled = false;
+  }
+}
+
+$("form").addEventListener("submit", search);
+loadStatus();
+loadMedicines();
+</script>
+</body>
+</html>

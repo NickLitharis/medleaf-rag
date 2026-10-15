@@ -7,18 +7,31 @@ never answers 200 with an empty result list to hide a broken index.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from medleaf.config import Settings, get_settings
-from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
+from medleaf.retrieval.index import (
+    IndexIncompleteError,
+    IndexMissingError,
+    RetrievalUnavailableError,
+)
 from medleaf.retrieval.service import ReadyState, RetrievalService, SearchResponse
 
 DOC_KINDS = Literal["smpc", "leaflet"]
 LANGS = Literal["en", "el"]
+SEARCH_PAGE = Path(__file__).with_name("static") / "index.html"
+
+
+class MedicineOption(BaseModel):
+    """One indexed medicine, for the search page's filter."""
+
+    slug: str
+    active_substance: str | None = None
 
 
 class SearchRequest(BaseModel):
@@ -69,6 +82,10 @@ def _run_search(
             corpus_version=corpus_version,
             limit=limit,
         )
+    except IndexIncompleteError as error:
+        raise HTTPException(
+            status_code=503, detail={"error": "index_incomplete", "detail": str(error)}
+        ) from error
     except IndexMissingError as error:
         raise HTTPException(
             status_code=503, detail={"error": "index_missing", "detail": str(error)}
@@ -103,6 +120,25 @@ def create_app(
     app.state.settings = resolved_settings
     app.state.service = retriever
 
+    @app.get("/", include_in_schema=False)
+    def search_page() -> FileResponse:
+        """A one-page search UI over ``/v1/search``."""
+        return FileResponse(SEARCH_PAGE)
+
+    @app.get("/v1/medicines", tags=["retrieval"], response_model=list[MedicineOption])
+    def medicines() -> list[MedicineOption]:
+        """Medicines in the current index, from the build manifest."""
+        try:
+            manifest = retriever.manifest()
+        except IndexMissingError as error:
+            raise HTTPException(
+                status_code=503, detail={"error": "index_missing", "detail": str(error)}
+            ) from error
+        return [
+            MedicineOption(slug=slug, active_substance=manifest.active_substances.get(slug))
+            for slug in sorted(manifest.medicines)
+        ]
+
     @app.get("/healthz", tags=["ops"])
     def healthz() -> dict[str, str]:
         """Liveness: the process answers."""
@@ -119,8 +155,6 @@ def create_app(
     @app.post("/v1/search", tags=["retrieval"], response_model=SearchResponse)
     def search(request: SearchRequest) -> SearchResponse:
         """Hybrid search returning chunks with full source provenance."""
-        if request.lang is not None and request.lang not in ("en", "el"):
-            raise HTTPException(status_code=422, detail={"error": "bad_request", "detail": "lang"})
         return _run_search(
             retriever,
             query=request.query,

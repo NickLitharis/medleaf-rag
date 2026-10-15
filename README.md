@@ -92,7 +92,10 @@ curl "http://127.0.0.1:8000/v1/search?query=contraindications+of+Eliquis&lang=en
 
 Compose binds Qdrant and the API to loopback only, and the indexer runs as a one-shot
 profile so `docker compose up` never rebuilds the index by accident. `data/` is mounted
-from the host, so the corpus and the built index are not baked into images.
+from the host, so the corpus and the built index are not baked into images. Both
+`indexer` and `api` use `pull_policy: build`, so every `run`/`up` rebuilds the image
+from the current checkout first; a full index build fills a new collection and swaps
+the `medleaf_chunks` alias only when it finishes, so the API keeps serving meanwhile.
 
 ## Medical disclaimer
 

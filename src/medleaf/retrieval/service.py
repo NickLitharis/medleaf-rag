@@ -13,6 +13,7 @@ The API maps both to HTTP 503 with a machine-readable code; nothing returns an e
 
 from __future__ import annotations
 
+import threading
 import time
 from collections.abc import Sequence
 
@@ -20,13 +21,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from qdrant_client import QdrantClient, models
 
 from medleaf.config import Settings
-from medleaf.retrieval.embed import E5Encoder, Encoder, EncoderError
+from medleaf.retrieval.embed import PASSAGE_PREFIX, E5Encoder, Encoder, EncoderError
 from medleaf.retrieval.index import (
+    IndexIncompleteError,
     IndexManifest,
     IndexMissingError,
     RetrievalUnavailableError,
     build_filter,
-    collection_count,
+    check_complete,
     corpus_version_for,
     hybrid_search,
     load_manifest,
@@ -107,6 +109,7 @@ class RetrievalService:
         self.settings = settings
         self._client = client
         self._encoder = encoder
+        self._encoder_lock = threading.Lock()
 
     @property
     def client(self) -> QdrantClient:
@@ -125,17 +128,20 @@ class RetrievalService:
 
     @property
     def encoder(self) -> Encoder:
-        """Embedding model, loaded on first use."""
-        if self._encoder is None:
-            self._encoder = E5Encoder.load(
-                model_id=self.settings.embed_model,
-                revision=self.settings.embed_revision,
-                device=self.settings.embed_device,
-                batch_size=self.settings.embed_batch_size,
-                max_seq_length=self.settings.embed_max_seq_length,
-                cache_dir=self.settings.embed_cache_dir,
-            )
-        return self._encoder
+        """Embedding model, loaded once on first use (concurrent requests wait for it)."""
+        if self._encoder is not None:
+            return self._encoder
+        with self._encoder_lock:
+            if self._encoder is None:
+                self._encoder = E5Encoder.load(
+                    model_id=self.settings.embed_model,
+                    revision=self.settings.embed_revision,
+                    device=self.settings.embed_device,
+                    batch_size=self.settings.embed_batch_size,
+                    max_seq_length=self.settings.embed_max_seq_length,
+                    cache_dir=self.settings.embed_cache_dir,
+                )
+            return self._encoder
 
     @property
     def collection(self) -> str:
@@ -146,7 +152,7 @@ class RetrievalService:
         return load_manifest(self.settings.index_manifest_file)
 
     def ready(self) -> ReadyState:
-        """Cheap readiness check: Qdrant reachable, collection populated, manifest present."""
+        """Readiness: Qdrant reachable, manifest present, point count equal to the manifest's."""
         try:
             manifest = self.manifest()
         except IndexMissingError as error:
@@ -160,7 +166,11 @@ class RetrievalService:
                         "run `medleaf index build`"
                     ),
                 )
-            points = collection_count(self.client, collection=self.collection)
+            points = check_complete(
+                self.client, collection=self.collection, expected_points=manifest.total_chunks
+            )
+        except IndexIncompleteError as error:
+            return ReadyState(ready=False, detail=str(error), collection=self.collection)
         except Exception as error:
             return ReadyState(ready=False, detail=f"qdrant unavailable: {error}")
         if points == 0:
@@ -206,9 +216,16 @@ class RetrievalService:
 
         started = time.perf_counter()
         try:
-            require_index(self.client, collection=self.collection, corpus_version=version)
+            require_index(
+                self.client,
+                collection=self.collection,
+                corpus_version=version,
+                expected_points=manifest.total_chunks,
+            )
             encoder = self.encoder
-            dense = encoder.encode_queries([query])[0]
+            # A user may literally type ``passage: ...``; the encoder rightly refuses that
+            # prefix on its query path, so drop it here rather than fail the request.
+            dense = encoder.encode_queries([query.removeprefix(PASSAGE_PREFIX)])[0]
             # The sparse channel drops function words and the medicine already applied as
             # a filter: raw term frequency would otherwise let a long chunk win on
             # ``the``/brand-name repetition. The dense query keeps the full wording
@@ -225,7 +242,7 @@ class RetrievalService:
                 prefetch_limit=self.settings.prefetch_limit,
                 query_filter=query_filter,
             )
-        except (IndexMissingError, ValueError):
+        except IndexMissingError:
             raise
         except EncoderError as error:
             raise RetrievalUnavailableError(str(error)) from error

@@ -27,6 +27,39 @@ flowchart LR
     V --> O[Cited answer]
 ```
 
+## Quick start (Docker)
+
+You need only Docker (with Compose) and about 4 GB of free disk space. Search works
+without any key. Ask needs an OpenAI-compatible LLM key; a free
+[NVIDIA developer key](https://build.nvidia.com/) works.
+
+```bash
+git clone https://github.com/NickLitharis/medleaf-rag.git
+cd medleaf-rag
+
+# 1. Optional, for Ask: put your LLM settings in .env (gitignored; Compose reads it).
+cat > .env <<'EOF'
+MEDLEAF_LLM_BASE_URL=https://integrate.api.nvidia.com/v1
+MEDLEAF_LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
+MEDLEAF_LLM_SOURCE_QUOTES_ONLY=true
+MEDLEAF_LLM_API_KEY=<your-nvidia-key>
+EOF
+
+# 2. Download the 80 EMA PDFs (~185 MB, checksums pinned in data/medicines.yaml).
+docker compose run --rm indexer python -m medleaf.cli download --workers 2
+
+# 3. Build the index once (about 75 minutes on CPU; downloads a 1 GB embedding model).
+docker compose run --rm indexer
+
+# 4. Start the API and open http://127.0.0.1:8000/
+docker compose up -d api
+```
+
+The first question after a start loads the embedding model and takes about a minute.
+`docker compose down` stops everything; the index stays in `data/` and the Qdrant
+volume, so step 4 alone restarts the demo. More detail is under
+[Docker Compose](#docker-compose) and [Try the local demo](#try-the-local-demo).
+
 Bilingual (Greek / English) question answering over official EU medicine
 information, with cited answers and medical safety guardrails. The local demo
 covers 40 centrally authorised medicines in both languages. It combines dense

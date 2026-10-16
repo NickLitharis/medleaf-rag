@@ -7,6 +7,11 @@ official EMA documents, with a link to every source.**
 Hybrid search (dense + keyword) over 8,797 chunks from 40 medicines, with safety
 redirects for personal-treatment and emergency questions.
 
+<p>
+  <img src="docs/demo-en.jpg" alt="English question about Eliquis answered with quoted, cited EMA excerpts" width="49%">
+  <img src="docs/demo-el.jpg" alt="Greek question about Ozempic side effects answered with quoted, cited EMA excerpts" width="49%">
+</p>
+
 ## How it works
 
 ```mermaid

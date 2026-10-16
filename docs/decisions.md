@@ -51,3 +51,27 @@ Short log of choices that are not obvious from the code. Newest last.
 - **Not in slice 1:** the safety check (no `safety` event yet), medicine-name filtering,
   the cross-encoder reranker and the score-threshold refusal. Until then `done.refused`
   means "the answer has no valid citation".
+
+## 2026-10-16 — M4 slice 2A: safety check and medicine filter
+
+- **Order (SPEC §9):** emergency keyword rules run first and skip the LLM, so an
+  emergency never waits on a slow or failing model. Otherwise the LLM labels the
+  question, and a personal keyword match raises an `info` label to `personal`. An LLM
+  error or an unreadable reply counts as `personal`. The label and its source
+  (`keywords`, `llm`, `fallback`) are logged for every question.
+- **Rules need a first-person or present-tense signal** ("I took too many", "my son
+  swallowed", "θέλω να πεθάνω"), so "What are the symptoms of overdose?" or "Does Lyrica
+  cause suicidal thoughts?" still reach the documents. Text is lower-cased and
+  accent-stripped first; `casefold` turns `ς` into `σ`, so the patterns use `σ`.
+- **The emergency message always lists 1018 (Klimaka)**, as well as 112, 166 and the Poison
+  Information Centre. Not only for suicidal wording, because keyword rules cannot
+  reliably separate intent from accident. 1018 confirmed as Klimaka's 24-hour
+  suicide-intervention line, 2026-10-16.
+- **Greek substance names live in `retrieval/names.py`, not `medicines.yaml`.** That
+  file's hash is the corpus version, so editing it would invalidate the index and the
+  CI cache. The names are stems (Greek inflects the ending) taken from each Greek SmPC
+  section 2. The 11 medicines whose Greek documents write the substance in Latin script
+  need no entry. Brands come from the slugs, English substances from the manifest.
+- **Known issue:** the `openrouter/free` router sometimes picks a guard model, which
+  answers "User Safety: unsafe" instead of an answer (seen once in the live check). Pin a
+  specific model through `MEDLEAF_LLM_MODEL` if it recurs.

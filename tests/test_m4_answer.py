@@ -21,8 +21,9 @@ from medleaf.generation.answer import (
     select_sources,
     stream_chat,
 )
-from medleaf.retrieval.index import RetrievalUnavailableError
+from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
 from medleaf.retrieval.service import SearchHit, SearchResponse
+from medleaf.safety.classifier import SAFETY_PROMPT
 
 
 def _hit(chunk_id: str, lang: str = "en", rank: int = 1) -> SearchHit:
@@ -42,6 +43,9 @@ class FakeService:
         self.results = list(results) or [_hit("eliquis:smpc:4.5")]
         self.error = error
         self.calls: list[dict[str, Any]] = []
+
+    def manifest(self) -> Any:
+        raise IndexMissingError("no manifest in this test")
 
     def search(self, query: str, **kwargs: Any) -> SearchResponse:
         self.calls.append(kwargs)
@@ -64,6 +68,9 @@ def _events(body: str) -> list[tuple[str, object]]:
 
 def _llm(*pieces: str, error: Exception | None = None):  # type: ignore[no-untyped-def]
     async def generate(messages: list[dict[str, str]]) -> AsyncIterator[str]:
+        if messages[0]["content"] == SAFETY_PROMPT:
+            yield "info"
+            return
         for piece in pieces:
             yield piece
         if error is not None:
@@ -113,7 +120,7 @@ def test_ask_streams_a_cited_answer() -> None:
     response = client.post("/v1/ask", json={"question": "Can I take Eliquis with ibuprofen?"})
     assert response.status_code == 200
     events = _events(response.text)
-    assert events[0][0] == "retrieval"
+    assert [name for name, _ in events][:2] == ["safety", "retrieval"]
     assert [name for name, _ in events][-2:] == ["citations", "done"]
     text = "".join(data["text"] for name, data in events if name == "token")  # type: ignore[index]
     assert text == "Avoid with NSAIDs [Eliquis SmPC 4.5]. Fake ."
@@ -130,7 +137,7 @@ def test_ask_reports_an_llm_failure_as_an_error_event() -> None:
     llm = _llm("Partial", error=LLMError("model: HTTP 401: no key"))
     client = TestClient(create_app(settings=Settings(), service=FakeService(), generate=llm))  # type: ignore[arg-type]
     events = _events(client.post("/v1/ask", json={"question": "q"}).text)
-    assert [name for name, _ in events] == ["retrieval", "token", "error"]
+    assert [name for name, _ in events] == ["safety", "retrieval", "token", "error"]
     assert events[-1][1] == {"code": "llm_unavailable", "message": "model: HTTP 401: no key"}
 
 

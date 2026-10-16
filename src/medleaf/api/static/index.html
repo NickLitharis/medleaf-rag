@@ -51,6 +51,8 @@
   .answer { border-color: var(--accent); }
   .answer ul { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
   .answer a { color: var(--accent); }
+  .answer.redirect { border-color: var(--bad); }
+  .answer.redirect h2 { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -183,6 +185,11 @@ async function ask() {
   $("out").replaceChildren(box);
   let writing = false;
   const handlers = {
+    safety: (data) => {
+      if (data.label === "info") return;
+      box.classList.add("redirect");
+      box.querySelector("h2").textContent = data.label === "emergency" ? "Get help now" : "Ask a professional";
+    },
     retrieval: (chunks) => { answer.textContent = `Read ${chunks.length} sections; writing the answer…`; },
     token: (data) => {
       if (!writing) { answer.textContent = ""; writing = true; }

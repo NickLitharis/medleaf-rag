@@ -34,7 +34,21 @@ from medleaf.retrieval.index import (
     load_manifest,
     require_index,
 )
-from medleaf.retrieval.text import drop_terms, query_sparse_vector
+from medleaf.retrieval.text import TOKENIZER_VERSION, drop_terms, query_sparse_vector
+
+
+def require_tokenizer(manifest: IndexManifest) -> None:
+    """Refuse an index whose sparse tokens were built by different tokenisation rules.
+
+    A mismatch does not error inside Qdrant; query tokens simply stop matching the stored
+    ones and results quietly degrade, so it is reported as a missing index instead.
+    """
+    if manifest.tokenizer != TOKENIZER_VERSION:
+        msg = (
+            f"index was built with tokenizer {manifest.tokenizer!r} but this code uses "
+            f"{TOKENIZER_VERSION!r}; run `medleaf index build`"
+        )
+        raise IndexMissingError(msg)
 
 
 class SearchHit(BaseModel):
@@ -155,6 +169,7 @@ class RetrievalService:
         """Readiness: Qdrant reachable, manifest present, point count equal to the manifest's."""
         try:
             manifest = self.manifest()
+            require_tokenizer(manifest)
         except IndexMissingError as error:
             return ReadyState(ready=False, detail=str(error))
         try:
@@ -204,6 +219,7 @@ class RetrievalService:
             msg = "query must not be empty"
             raise ValueError(msg)
         manifest = self.manifest()
+        require_tokenizer(manifest)
         version = corpus_version or manifest.corpus_version
         request_limit = limit or self.settings.default_limit
         query_filter = build_filter(

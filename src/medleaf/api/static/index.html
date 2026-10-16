@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MedLeaf Search</title>
+<title>MedLeaf</title>
 <style>
   :root {
     --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5d6673; --border: #d9dee5;
@@ -48,18 +48,22 @@
   .hit a { color: var(--accent); }
   .linkish { background: none; color: var(--accent); padding: 0; font-weight: 400; font-size: 12px; }
   .note { font-size: 12px; color: var(--muted); }
+  .answer { border-color: var(--accent); }
+  .answer ul { margin: 8px 0 0; padding-left: 18px; font-size: 13px; }
+  .answer a { color: var(--accent); }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>MedLeaf Search</h1>
+    <h1>MedLeaf</h1>
     <span class="status" id="status">checking index…</span>
   </header>
 
   <form id="form">
     <div class="row">
       <input type="search" id="query" placeholder="e.g. contraindications, ναυτία, use in pregnancy" required autofocus>
+      <button id="ask" type="button">Ask</button>
       <button id="go" type="submit">Search</button>
     </div>
     <div class="filters">
@@ -76,7 +80,7 @@
         <select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
       </label>
     </div>
-    <span class="note">Tip: pick a medicine for the most precise answers. The first search after a restart loads the model and can take about a minute.</span>
+    <span class="note"><b>Ask</b> writes a cited answer from the documents (name the medicine in your question; the filters apply to Search only). <b>Search</b> lists the matching sections. The first request after a restart loads the model and can take about a minute.</span>
   </form>
 
   <section id="out" aria-live="polite"></section>
@@ -150,10 +154,7 @@ async function search(event) {
     const response = await fetch(`/v1/search?${params}`);
     const body = await response.json();
     if (!response.ok) {
-      const detail = body.detail;
-      const message = typeof detail === "string" ? detail
-        : detail && detail.detail ? `${detail.error}: ${detail.detail}` : JSON.stringify(detail);
-      $("out").replaceChildren(el("div", { class: "error" }, `Error ${response.status} — ${message}`));
+      $("out").replaceChildren(el("div", { class: "error" }, `Error ${response.status} — ${errorText(body)}`));
       return;
     }
     const meta = el("p", { class: "meta" },
@@ -167,7 +168,74 @@ async function search(event) {
   }
 }
 
+function errorText(body) {
+  const detail = body.detail;
+  return typeof detail === "string" ? detail
+    : detail && detail.detail ? `${detail.error}: ${detail.detail}` : JSON.stringify(detail);
+}
+
+async function ask() {
+  const question = $("query").value.trim();
+  if (!question) { $("query").reportValidity(); return; }
+  $("ask").disabled = $("go").disabled = true;
+  const answer = el("p", { class: "text" }, "Searching the documents…");
+  const box = el("article", { class: "hit answer" }, el("h2", {}, "Answer"), answer);
+  $("out").replaceChildren(box);
+  let writing = false;
+  const handlers = {
+    retrieval: (chunks) => { answer.textContent = `Read ${chunks.length} sections; writing the answer…`; },
+    token: (data) => {
+      if (!writing) { answer.textContent = ""; writing = true; }
+      answer.append(data.text);
+    },
+    citations: (items) => {
+      if (!items.length) return;
+      box.append(el("ul", {}, ...items.map((item) => el("li", {},
+        el("a", { href: item.url, target: "_blank", rel: "noopener" }, item.key),
+        ` · revised ${item.revision_date || "n/a"}`))));
+    },
+    done: (data) => {
+      box.append(el("p", { class: "note" },
+        `${data.refused ? "No cited answer. " : ""}${data.disclaimer} (${(data.latency_ms / 1000).toFixed(1)} s)`));
+    },
+    error: (data) => { box.append(el("div", { class: "error" }, `${data.code}: ${data.message}`)); },
+  };
+  try {
+    const response = await fetch("/v1/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ detail: response.statusText }));
+      $("out").replaceChildren(el("div", { class: "error" }, `Error ${response.status} — ${errorText(body)}`));
+      return;
+    }
+    // Server-Sent Events over POST: EventSource only does GET, so parse the stream here.
+    const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += value;
+      let cut;
+      while ((cut = buffer.indexOf("\n\n")) >= 0) {
+        const block = buffer.slice(0, cut);
+        buffer = buffer.slice(cut + 2);
+        const name = (block.match(/^event: (.*)$/m) || [])[1];
+        const data = (block.match(/^data: (.*)$/m) || [])[1];
+        if (handlers[name] && data !== undefined) handlers[name](JSON.parse(data));
+      }
+    }
+  } catch (error) {
+    box.append(el("div", { class: "error" }, `Request failed: ${error}`));
+  } finally {
+    $("ask").disabled = $("go").disabled = false;
+  }
+}
+
 $("form").addEventListener("submit", search);
+$("ask").addEventListener("click", ask);
 loadStatus();
 loadMedicines();
 </script>

@@ -1,0 +1,41 @@
+{
+  "description": "Targeted quote-preservation checks for the observed Ozempic dose-percentage reversal. Fixed context isolates generation, not retrieval. This is not a clinical accuracy benchmark.",
+  "attribution": "European Medicines Agency (EMA), Ozempic product information, SmPC section 4.8. Source excerpts remain copyright of EMA.",
+  "cases": [
+    {
+      "id": "ozempic-nausea-en",
+      "lang": "en",
+      "chunk_id": "ozempic:smpc:4.8#3",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/ozempic-epar-product-information_en.pdf",
+      "source_sentences": [
+        "American Diabetes Association (ADA) classified hypoglycaemia occurred in 11.3% (0.3 events/patient year) of patients when semaglutide 1 mg was added to SGLT2 inhibitor in SUSTAIN 9 compared to 2.0% (0.04 events/patient year) of placebo-treated patients.",
+        "Nausea occurred in 17% and 19.9% of patients when treated with semaglutide 0.5 mg and 1 mg, respectively, diarrhoea in 12.2% and 13.3% and vomiting in 6.4% and 8.4%.",
+        "The events led to treatment discontinuation in 3.9% and 5% of patients."
+      ],
+      "expected_quote": "Nausea occurred in 17% and 19.9% of patients when treated with semaglutide 0.5 mg and 1 mg, respectively, diarrhoea in 12.2% and 13.3% and vomiting in 6.4% and 8.4%.",
+      "questions": [
+        {"text": "What are the side effects of Ozempic?", "requires_numbers": false},
+        {"text": "What nausea percentages does the Ozempic source report for the two semaglutide doses?", "requires_numbers": true},
+        {"text": "Does this Ozempic excerpt say nausea occurred in 19.9% at 0.5 mg and 17% at 1 mg?", "requires_numbers": true}
+      ]
+    },
+    {
+      "id": "ozempic-nausea-el",
+      "lang": "el",
+      "chunk_id": "ozempic:smpc:4.8#4",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/ozempic-epar-product-information_el.pdf",
+      "source_sentences": [
+        "Υπογλυκαιμία σύμφωνα με την Αμερικανική Διαβητολογική Εταιρία (ADA) εκδηλώθηκε σε ποσοστό 11,3% (0,3 συμβάματα/ασθενο-έτος) των ασθενών όταν η σεμαγλουτίδη 1 mg προστέθηκε σε αναστολέα SGLT2 στη SUSTAIN 9 σε σύγκριση με ποσοστό 2% (0,04 συμβάματα/ασθενο-έτος) ασθενών που έλαβαν εικονικό φάρμακο.",
+        "Ναυτία εκδηλώθηκε στο 17% και το 19,9% των ασθενών που έλαβαν θεραπεία με σεμαγλουτίδη 0,5 mg και 1 mg αντίστοιχα, διάρροια στο 12,2% και το 13,3% και έμετος στο 6,4% και το 8,4%.",
+        "Τα συμβάματα οδήγησαν σε διακοπή της θεραπείας στο 3,9% και το 5% των ασθενών."
+      ],
+      "expected_quote": "Ναυτία εκδηλώθηκε στο 17% και το 19,9% των ασθενών που έλαβαν θεραπεία με σεμαγλουτίδη 0,5 mg και 1 mg αντίστοιχα, διάρροια στο 12,2% και το 13,3% και έμετος στο 6,4% και το 8,4%.",
+      "swapped_answer": "Ναυτία (17% με 1 mg, 19,9% με 0,5 mg), διάρροια (12,2% με 1 mg, 13,3% με 0,5 mg) και εμετός (6,4% με 1 mg, 8,4% με 0,5 mg). [Ozempic SmPC 4.8]",
+      "questions": [
+        {"text": "Ποιες είναι οι ανεπιθύμητες ενέργειες του Ozempic;", "requires_numbers": false},
+        {"text": "Ποια ποσοστά ναυτίας αναφέρει η πηγή του Ozempic για τις δύο δόσεις σεμαγλουτίδης;", "requires_numbers": true},
+        {"text": "Λέει αυτό το απόσπασμα του Ozempic ότι η ναυτία ήταν 19,9% στα 0,5 mg και 17% στο 1 mg;", "requires_numbers": true}
+      ]
+    }
+  ]
+}

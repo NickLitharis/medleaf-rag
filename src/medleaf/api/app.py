@@ -27,9 +27,13 @@ from medleaf.generation.answer import (
     DISCLAIMERS,
     CitationFilter,
     LLMError,
+    NumericalGroundingError,
     build_messages,
     citation_key,
     detect_lang,
+    parse_quote_selection,
+    quote_selection_format,
+    render_numerical_quotes,
     select_sources,
     stream_chat,
 )
@@ -243,6 +247,17 @@ def create_app(
         lang = request.lang or detect_lang(request.question)
         label, source = await classify(request.question, llm)
         log.info("ask safety: label=%s source=%s", label, source)
+        if source == "fallback":
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "safety_unavailable",
+                    "detail": (
+                        "The safety check could not complete. Try again later or use Search "
+                        "to read the official documents. No answer was generated."
+                    ),
+                },
+            )
         if label != "info":
             return StreamingResponse(
                 _redirect_events(label, lang, started),
@@ -265,8 +280,16 @@ def create_app(
             )
         )
         sources = select_sources(found.results, lang, request.top_k)
+        answer_llm = llm
+        if generate is None and resolved_settings.llm_source_quotes_only:
+            answer_llm = partial(
+                stream_chat, resolved_settings, response_format=quote_selection_format(sources),
+            )
         return StreamingResponse(
-            _answer_events(request.question, lang, sources, llm, started),
+            _answer_events(
+                request.question, lang, sources, answer_llm, started,
+                source_quotes_only=resolved_settings.llm_source_quotes_only,
+            ),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
@@ -304,6 +327,8 @@ async def _answer_events(
     sources: list[SearchHit],
     llm: Generate,
     started: float,
+    *,
+    source_quotes_only: bool = False,
 ) -> AsyncIterator[str]:
     trace_id = uuid.uuid4().hex
     yield _sse("safety", {"label": "info"})
@@ -316,13 +341,29 @@ async def _answer_events(
         by_key.setdefault(citation_key(hit), hit)
     citations = CitationFilter(set(by_key))
     try:
-        async for piece in llm(build_messages(question, sources, lang)):
-            text = citations.feed(piece)
-            if text:
-                yield _sse("token", {"text": text})
-        tail = citations.flush()
-        if tail:
-            yield _sse("token", {"text": tail})
+        # Do not expose a numerical paraphrase and try to retract it afterwards.
+        messages = build_messages(question, sources, lang, source_quotes_only=source_quotes_only)
+        parts = [piece async for piece in llm(messages)]
+        raw = "".join(parts)
+        if source_quotes_only:
+            raw = parse_quote_selection(raw, sources, lang)
+        answer = render_numerical_quotes(raw, sources)
+        text = citations.feed(answer) + citations.flush()
+        if text:
+            yield _sse("token", {"text": text})
+    except NumericalGroundingError:
+        log.warning("ask %s: rejected unverified numerical output", trace_id)
+        yield _sse(
+            "error",
+            {
+                "code": "numerical_grounding_failed",
+                "message": (
+                    "The answer contained unverified numerical details. No answer was shown. "
+                    "Use Search to read the official source, or try again."
+                ),
+            },
+        )
+        return
     except LLMError as error:
         log.warning("ask %s: LLM failed after retrieval %s: %s", trace_id,
                     [hit.chunk_id for hit in sources], error)

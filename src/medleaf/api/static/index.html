@@ -62,6 +62,8 @@
     <span class="status" id="status">checking index…</span>
   </header>
 
+  <p class="note">Official EU medicine information in English and Greek. This is a portfolio demo, not medical advice. Generated answers can contain factual errors. Always read the linked source. Do not use it to choose or change treatment. In an emergency, call 112.</p>
+
   <form id="form">
     <div class="row">
       <input type="search" id="query" placeholder="e.g. contraindications, ναυτία, use in pregnancy" required autofocus>
@@ -81,6 +83,12 @@
       <label>Results
         <select id="limit"><option>5</option><option selected>10</option><option>20</option><option>50</option></select>
       </label>
+    </div>
+    <div class="filters" id="examples" aria-label="Example questions">
+      <span class="note">Try a question:</span>
+      <button type="button" class="chip">What is Eliquis used for?</button>
+      <button type="button" class="chip">Ποιες είναι οι ανεπιθύμητες ενέργειες του Ozempic;</button>
+      <button type="button" class="chip">Should I stop taking Eliquis?</button>
     </div>
     <span class="note"><b>Ask</b> writes a cited answer from the documents (name the medicine in your question; the filters apply to Search only). <b>Search</b> lists the matching sections. The first request after a restart loads the model and can take about a minute.</span>
   </form>
@@ -105,7 +113,7 @@ async function loadStatus() {
     const response = await fetch("/readyz");
     const state = await response.json();
     $("status").replaceChildren(
-      el("b", { class: state.ready ? "ok" : "bad" }, state.ready ? "ready" : "not ready"),
+      el("b", { class: state.ready ? "ok" : "bad" }, state.ready ? "index ready" : "index not ready"),
       ` · ${state.detail}`
     );
   } catch (error) {
@@ -150,7 +158,7 @@ async function search(event) {
   event.preventDefault();
   const params = new URLSearchParams({ query: $("query").value.trim(), limit: $("limit").value });
   for (const id of ["medicine", "lang", "doc"]) if ($(id).value) params.set(id, $(id).value);
-  $("go").disabled = true;
+  $("ask").disabled = $("go").disabled = true;
   $("out").replaceChildren(el("p", { class: "meta" }, "Searching…"));
   try {
     const response = await fetch(`/v1/search?${params}`);
@@ -166,7 +174,7 @@ async function search(event) {
   } catch (error) {
     $("out").replaceChildren(el("div", { class: "error" }, `Request failed: ${error}`));
   } finally {
-    $("go").disabled = false;
+    $("ask").disabled = $("go").disabled = false;
   }
 }
 
@@ -180,7 +188,7 @@ async function ask() {
   const question = $("query").value.trim();
   if (!question) { $("query").reportValidity(); return; }
   $("ask").disabled = $("go").disabled = true;
-  const answer = el("p", { class: "text" }, "Searching the documents…");
+  const answer = el("p", { class: "text" }, "Checking the question…");
   const box = el("article", { class: "hit answer" }, el("h2", {}, "Answer"), answer);
   $("out").replaceChildren(box);
   let writing = false;
@@ -190,7 +198,7 @@ async function ask() {
       box.classList.add("redirect");
       box.querySelector("h2").textContent = data.label === "emergency" ? "Get help now" : "Ask a professional";
     },
-    retrieval: (chunks) => { answer.textContent = `Read ${chunks.length} sections; writing the answer…`; },
+    retrieval: (chunks) => { answer.textContent = `Read ${chunks.length} sections; preparing the answer and checking numerical source quotes…`; },
     token: (data) => {
       if (!writing) { answer.textContent = ""; writing = true; }
       answer.append(data.text);
@@ -205,7 +213,10 @@ async function ask() {
       box.append(el("p", { class: "note" },
         `${data.refused ? "No cited answer. " : ""}${data.disclaimer} (${(data.latency_ms / 1000).toFixed(1)} s)`));
     },
-    error: (data) => { box.append(el("div", { class: "error" }, `${data.code}: ${data.message}`)); },
+    error: (data) => {
+      if (!writing) answer.textContent = "No answer available.";
+      box.append(el("div", { class: "error" }, `${data.code}: ${data.message}`));
+    },
   };
   try {
     const response = await fetch("/v1/ask", {
@@ -241,6 +252,11 @@ async function ask() {
   }
 }
 
+$("examples").addEventListener("click", (event) => {
+  if (event.target.tagName !== "BUTTON") return;
+  $("query").value = event.target.textContent;
+  $("query").focus();
+});
 $("form").addEventListener("submit", search);
 $("ask").addEventListener("click", ask);
 loadStatus();

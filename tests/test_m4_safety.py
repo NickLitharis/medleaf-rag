@@ -165,6 +165,17 @@ def test_ask_redirects_personal_label_from_llm() -> None:
     assert service.calls == []
 
 
+@pytest.mark.parametrize("reply", ["not sure", LLMError("provider unavailable")])
+def test_ask_reports_classifier_failure_without_retrieval(reply: str | LLMError) -> None:
+    service = FakeService()
+    generate = _reply(error=reply) if isinstance(reply, LLMError) else _reply(reply)
+    client = TestClient(create_app(settings=Settings(), service=service, generate=generate))  # type: ignore[arg-type]
+    response = client.post("/v1/ask", json={"question": "What is Eliquis used for?"})
+    assert response.status_code == 503
+    assert response.json()["detail"]["error"] == "safety_unavailable"
+    assert service.calls == []
+
+
 def test_ask_filters_search_to_named_medicines() -> None:
     service = FakeService()
     client = TestClient(create_app(settings=Settings(), service=service, generate=_llm("info")))  # type: ignore[arg-type]

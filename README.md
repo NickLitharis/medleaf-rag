@@ -1,5 +1,27 @@
 # MedLeaf RAG
 
+[![CI](https://github.com/NickLitharis/medleaf-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/NickLitharis/medleaf-rag/actions/workflows/ci.yml)
+
+**Ask questions about EU medicines in Greek or English and get answers quoted from
+official EMA documents, with a link to every source.**
+Hybrid search (dense + keyword) over 8,797 chunks from 40 medicines, with safety
+redirects for personal-treatment and emergency questions.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[EMA PDFs<br/>40 medicines, EL + EN] --> B[Parse + chunk<br/>by section]
+    B --> C[(Qdrant<br/>dense e5 + sparse)]
+    Q[Question] --> S{Safety<br/>check}
+    S -->|redirect| R[Fixed safe reply]
+    S -->|ok| H[Hybrid search<br/>RRF fusion]
+    C --> H
+    H --> L[LLM picks<br/>source lines]
+    L --> V[Server checks<br/>citations + numbers]
+    V --> O[Cited answer]
+```
+
 Bilingual (Greek / English) question answering over official EU medicine
 information, with cited answers and medical safety guardrails. The local demo
 covers 40 centrally authorised medicines in both languages. It combines dense

@@ -45,12 +45,13 @@ from medleaf.retrieval.pipeline import (
     parse_with_cache,
     resolved_corpus_version,
 )
-from medleaf.retrieval.service import SearchHit, SearchResponse
+from medleaf.retrieval.service import RetrievalService, SearchHit, SearchResponse
 from medleaf.retrieval.text import (
     drop_terms,
     fold_text,
     query_sparse_vector,
     sparse_vector,
+    stem,
     token_id,
     tokenize,
 )
@@ -99,6 +100,24 @@ def test_tokens_match_regardless_of_accents_or_case() -> None:
     assert tokenize("Nausea, vomiting; severe") == ["nausea", "vomiting", "severe"]
 
 
+def test_greek_inflections_share_a_token() -> None:
+    """Question and source forms seen in the Greek Ozempic retrieval miss."""
+    pairs = [
+        ("ναυτίας", "Ναυτία"),
+        ("σεμαγλουτίδης", "σεμαγλουτίδη"),
+        ("δόσεις", "δόση"),
+        ("ανεπιθύμητες", "ανεπιθύμητων"),
+        ("αντενδείξεις", "αντένδειξη"),
+    ]
+    for question_form, source_form in pairs:
+        assert tokenize(question_form) == tokenize(source_form), question_form
+    # Latin tokens, digits and short Greek stems are left alone.
+    assert stem("nausea") == "nausea"
+    assert stem("mg") == "mg"
+    assert stem("19") == "19"
+    assert stem("οδο") == "οδο"
+
+
 def test_sparse_vector_uses_folded_tokens() -> None:
     accented = sparse_vector("Θρομβοεμβολικά επεισόδια")
     plain = sparse_vector("θρομβοεμβολικα επεισοδια")
@@ -115,7 +134,7 @@ def test_query_sparse_vector_drops_function_words() -> None:
     assert keywords <= set(query.indices)
     assert not (stop & set(query.indices))
     greek = query_sparse_vector("Ποιες είναι οι αντενδείξεις του Eliquis;")
-    assert token_id("αντενδειξεισ") in greek.indices
+    assert token_id("αντενδειξ") in greek.indices
     assert token_id("ποιες") not in greek.indices
 
 
@@ -243,6 +262,34 @@ def test_manifest_roundtrip_and_incomplete_flag(tmp_path: Path) -> None:
     assert load_manifest(path) == manifest
     with pytest.raises(IndexMissingError):
         load_manifest(tmp_path / "absent.json")
+
+
+def test_index_built_with_another_tokenizer_is_not_served(tmp_path: Path) -> None:
+    """Stale sparse tokens would silently degrade results, so readiness and search refuse."""
+    encoder = E5Encoder(_RecordingModel(dimension=8), model_id="m", revision="rev")
+    settings = Settings(data_dir=tmp_path)
+    manifest = build_manifest(
+        collection="c",
+        corpus_version="v",
+        corpus_sha256_value="0" * 64,
+        encoder=encoder,
+        dense_vector_name="dense",
+        sparse_vector_name="sparse",
+        chunk_counts={"eliquis:en": 3},
+        medicines=["eliquis"],
+        languages=["en"],
+        missing=[],
+    )
+    write_manifest(
+        settings.index_manifest_file,
+        manifest.model_copy(update={"tokenizer": "medleaf-tokenizer-1"}),
+    )
+    service = RetrievalService(settings, encoder=encoder)
+    state = service.ready()
+    assert state.ready is False
+    assert "medleaf-tokenizer-1" in state.detail
+    with pytest.raises(IndexMissingError, match="run `medleaf index build`"):
+        service.search("nausea")
 
 
 def test_corpus_version_is_derived_from_the_manifest_bytes(tmp_path: Path) -> None:

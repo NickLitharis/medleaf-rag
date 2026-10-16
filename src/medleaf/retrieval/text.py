@@ -29,7 +29,20 @@ MIN_TOKEN_LEN = 2
 _WORD_RE = re.compile(r"[^\W_]+", re.UNICODE)
 
 #: Bump when the tokenisation rules change, so the index manifest shows the difference.
-TOKENIZER_VERSION = "medleaf-tokenizer-1"
+TOKENIZER_VERSION = "medleaf-tokenizer-2"
+
+#: Folded Greek inflectional endings, longest first. One is stripped per token so
+#: ``ναυτίας``/``ναυτία`` and ``δόσεις``/``δόση`` share a token (SPEC section 17 risk).
+_GREEK_ENDINGS: tuple[str, ...] = (
+    "ουσ", "εισ", "εων",
+    "ησ", "εσ", "ασ", "οσ", "ισ", "ων", "ου", "οι", "αι", "ει",
+    "α", "η", "ο", "ι", "ε",
+)
+
+#: A stem shorter than this would merge unrelated Greek words, so the ending is kept.
+_MIN_STEM_LEN = 3
+
+_GREEK_WORD_RE = re.compile(r"[α-ω]+")
 
 #: Query-side function words. They carry no retrieval signal, and in a long chunk their
 #: raw term frequency can outrank the single rare content word that decides the answer
@@ -62,10 +75,28 @@ def fold_text(text: str) -> str:
     return stripped.replace("ς", "σ")
 
 
-def tokenize(text: str) -> list[str]:
-    """Split text into folded tokens of at least :data:`MIN_TOKEN_LEN` characters."""
+def stem(token: str) -> str:
+    """Strip one inflectional ending from a folded, all-Greek token; others pass through.
+
+    ponytail: suffix list, not a real Greek stemmer; swap in one if the eval gate
+    shows over- or under-stemming.
+    """
+    if not _GREEK_WORD_RE.fullmatch(token):
+        return token
+    for ending in _GREEK_ENDINGS:
+        if token.endswith(ending) and len(token) - len(ending) >= _MIN_STEM_LEN:
+            return token[: -len(ending)]
+    return token
+
+
+def _folded_words(text: str) -> list[str]:
     folded = fold_text(text)
     return [token for token in _WORD_RE.findall(folded) if len(token) >= MIN_TOKEN_LEN]
+
+
+def tokenize(text: str) -> list[str]:
+    """Split text into folded, stemmed tokens of at least :data:`MIN_TOKEN_LEN` characters."""
+    return [stem(token) for token in _folded_words(text)]
 
 
 def token_id(token: str) -> int:
@@ -103,7 +134,10 @@ def query_sparse_vector(text: str) -> models.SparseVector:
     The stored passages keep their function words; matching them from the query is what
     is dropped here, so a long passage cannot win on ``the``/``of`` frequency alone.
     """
-    counts = Counter[str](token for token in tokenize(text) if token not in STOPWORDS)
+    # Stopwords are matched before stemming: they are listed in folded, unstemmed form.
+    counts = Counter[str](
+        stem(token) for token in _folded_words(text) if token not in STOPWORDS
+    )
     pairs = sorted((token_id(token), float(count)) for token, count in counts.items())
     return models.SparseVector(
         indices=[index for index, _ in pairs],
@@ -148,6 +182,7 @@ __all__ = [
     "query_sparse_vector",
     "sparse_pairs",
     "sparse_vector",
+    "stem",
     "token_id",
     "tokenize",
     "vocabulary_size",

@@ -68,6 +68,10 @@ class Settings(BaseSettings):
         description="Read from the environment only; never commit it.",
     )
     llm_timeout_s: float = Field(default=30.0)
+    llm_source_quotes_only: bool = Field(
+        default=False,
+        description="Select original source excerpts using native JSON-schema output.",
+    )
     ask_search_limit: int = Field(
         default=20, description="Chunks retrieved per question before picking the sources."
     )

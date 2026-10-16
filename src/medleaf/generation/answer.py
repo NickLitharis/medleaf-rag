@@ -38,11 +38,25 @@ exactly as written, e.g. [Eliquis SmPC 4.5].
 - Use only the keys listed with the sources. Never invent a key.
 - If the sources do not answer the question, or the question assumes something the \
 sources contradict, say so plainly and do not guess.
+- For clinical numbers, quote the complete source sentence verbatim by writing ONLY its \
+[quote:N] placeholder from the Source quotations list. The server inserts that sentence \
+in its original language and adds its citation. Never type the quotation yourself.
+- Do not write any digits outside source citation keys or [quote:N] placeholders. \
+Use bullet points, not numbered lists. Do not repeat numbers from the question, even to deny them.
+- Never translate, calculate, round, reorder or restate clinical numbers. Preserve units, \
+comparison groups and values linked by "respectively" or "αντίστοιχα" by using the placeholder. \
+If the sources do not explicitly state the requested relationship, say that it cannot be determined.
+- Otherwise summarize qualitatively and concisely in the answer language. Keep each quotation \
+separate from your explanation. Do not imply that a quoted figure belongs to a different group.
 - Report what the documents say. Do not give personal medical advice."""
 
 
 class LLMError(RuntimeError):
     """The LLM provider failed, timed out or returned an error."""
+
+
+class NumericalGroundingError(ValueError):
+    """Generated digits or an unknown quote reference cannot be shown safely."""
 
 
 def detect_lang(text: str) -> str:
@@ -72,14 +86,119 @@ def select_sources(hits: Sequence[SearchHit], lang: str, k: int) -> list[SearchH
     return list(chosen.values())
 
 
-def build_messages(question: str, sources: Sequence[SearchHit], lang: str) -> list[dict[str, str]]:
+def build_messages(
+    question: str, sources: Sequence[SearchHit], lang: str, *, source_quotes_only: bool = False,
+) -> list[dict[str, str]]:
     """Chat messages: the rules as system prompt, the keyed sources and the question."""
     blocks = [f"[{citation_key(hit)}] {hit.title}\n{hit.text}" for hit in sources]
-    user = "Sources:\n\n" + "\n\n".join(blocks) + f"\n\nQuestion: {question}"
+    quotes = "\n".join(
+        f"[{key}] {text} [{citation}]"
+        for key, (text, citation) in _source_quotes(sources).items()
+    )
+    user = (
+        "Sources:\n\n" + "\n\n".join(blocks)
+        + "\n\nSource quotations (select placeholders; do not rewrite):\n" + quotes
+        + f"\n\nQuestion: {question}"
+    )
+    system = SYSTEM_PROMPT.format(language=LANGUAGE_NAMES[lang])
+    if source_quotes_only:
+        system = (
+            "Select up to five source quotations that directly state the requested facts "
+            "or correct a false premise. Do not select section headings, navigation labels, "
+            "or text that merely mentions the drug or its doses. If the retrieved text does "
+            "not state the requested facts, return an empty list. Return only the quote_ids "
+            "in the required JSON format. Never write or paraphrase clinical facts."
+        )
     return [
-        {"role": "system", "content": SYSTEM_PROMPT.format(language=LANGUAGE_NAMES[lang])},
+        {"role": "system", "content": system},
         {"role": "user", "content": user},
     ]
+
+
+def _source_quotes(sources: Sequence[SearchHit]) -> dict[str, tuple[str, str]]:
+    """Numbered source lines, without sentence splitting that could break decimal values.
+
+    The parser emits sentence lines. A source with no line breaks becomes one longer
+    quotation. Either way, rendering preserves its text rather than reconstructing facts.
+    """
+    quotes = {}
+    for hit in sources:
+        for line in hit.text.splitlines():
+            if line.strip():
+                quotes[f"quote:{len(quotes) + 1}"] = (line.strip(), citation_key(hit))
+    return quotes
+
+
+def quote_selection_format(sources: Sequence[SearchHit]) -> dict[str, object]:
+    """Provider-enforced source IDs, never model-written medical prose."""
+    return {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "source_selection", "strict": True,
+            "schema": {
+                "type": "object", "additionalProperties": False,
+                "properties": {"quote_ids": {
+                    "type": "array", "maxItems": 5,
+                    "items": {"type": "string", "enum": list(_source_quotes(sources))},
+                }},
+                "required": ["quote_ids"],
+            },
+        },
+    }
+
+
+def parse_quote_selection(raw: str, sources: Sequence[SearchHit], lang: str) -> str:
+    """Validate again locally, even if a provider ignores the requested schema."""
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as error:
+        raise LLMError("Invalid source-selection JSON") from error
+    if not isinstance(value, dict) or set(value) != {"quote_ids"}:
+        raise LLMError("Invalid source-selection fields")
+    refs = value["quote_ids"]
+    if not isinstance(refs, list) or len(refs) > 5:
+        raise LLMError("Invalid source-selection list")
+    allowed = _source_quotes(sources)
+    if any(not isinstance(ref, str) or ref not in allowed for ref in refs):
+        raise NumericalGroundingError("Unknown source quotation")
+    if not refs:
+        return (
+            "Οι πηγές που ανακτήθηκαν δεν απαντούν στην ερώτηση." if lang == "el"
+            else "The retrieved sources do not answer this question."
+        )
+    heading = (
+        "Σχετικά αποσπάσματα από τις επίσημες πληροφορίες προϊόντος:" if lang == "el"
+        else "Relevant excerpts from the official product information:"
+    )
+    return heading + "\n\n" + "\n\n".join(f"- [{ref}]" for ref in dict.fromkeys(refs))
+
+
+def render_numerical_quotes(answer: str, sources: Sequence[SearchHit]) -> str:
+    """Expand trusted source references, rejecting generated digits before display.
+
+    This is not a semantic verifier: a model can still choose an irrelevant quotation
+    or give an incorrect qualitative explanation. Call before emitting ANY answer text.
+    """
+    quotes = _source_quotes(sources)
+    reference = re.compile(r"\[quote:(\d+)\]")
+
+    def resolve(match: re.Match[str]) -> str:
+        key = f"quote:{match[1]}"
+        if key not in quotes:
+            raise NumericalGroundingError("Unknown numerical source quotation")
+        text, citation = quotes[key]
+        return f'“{text}” [{citation}]'
+
+    # Validate references even when the rest of the answer contains no raw digits.
+    for match in reference.finditer(answer):
+        resolve(match)
+    unquoted = reference.sub("", answer)
+    citations = CitationFilter({citation_key(hit) for hit in sources})
+    unquoted = citations.feed(unquoted) + citations.flush()
+    unquoted = re.sub(r"\[[^\]]*\]", "", unquoted)  # remaining keys are known citations
+    if any(char.isdigit() for char in unquoted):
+        raise NumericalGroundingError("Unquoted generated number")
+    return reference.sub(resolve, answer)
 
 
 class CitationFilter:
@@ -127,7 +246,8 @@ class CitationFilter:
 
     def _check(self, inner: str) -> str:
         # Models sometimes group keys: "[Eliquis SmPC 4.5; Eliquis SmPC 4.3]".
-        keys = [key.strip() for key in re.split(r"[;,]", inner) if key.strip()]
+        # Treat typographic spaces like ASCII spaces, without accepting new source keys.
+        keys = [" ".join(key.split()) for key in re.split(r"[;,]", inner) if key.strip()]
         valid = [key for key in keys if key in self.allowed]
         for key in keys:
             seen = self.used if key in self.allowed else self.invented
@@ -141,6 +261,7 @@ async def stream_chat(
     messages: list[dict[str, str]],
     *,
     transport: httpx.AsyncBaseTransport | None = None,
+    response_format: dict[str, object] | None = None,
 ) -> AsyncIterator[str]:
     """Yield answer text from an OpenAI-compatible ``/chat/completions`` stream.
 
@@ -150,7 +271,11 @@ async def stream_chat(
     headers = {}
     if settings.llm_api_key and settings.llm_api_key.get_secret_value():  # Ollama needs none
         headers["Authorization"] = f"Bearer {settings.llm_api_key.get_secret_value()}"
-    payload = {"model": settings.llm_model, "messages": messages, "stream": True, "temperature": 0}
+    payload: dict[str, object] = {
+        "model": settings.llm_model, "messages": messages, "stream": True, "temperature": 0,
+    }
+    if response_format is not None:
+        payload["response_format"] = response_format
     try:
         async with (
             httpx.AsyncClient(

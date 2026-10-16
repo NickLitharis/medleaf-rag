@@ -96,6 +96,15 @@ def test_citation_filter_drops_invented_keys_across_chunk_boundaries() -> None:
     assert citations.invented == ["Eliquis SmPC 9.9", "Fake 1"]
 
 
+@pytest.mark.parametrize("space", ["\u00a0", "\u202f", "\u2009"])
+def test_citation_filter_normalizes_unicode_spaces(space: str) -> None:
+    citations = CitationFilter({"Eliquis Leaflet 1"})
+    text = citations.feed(f"Uses [Eliquis Leaflet{space}1].") + citations.flush()
+    assert text == "Uses [Eliquis Leaflet 1]."
+    assert citations.used == ["Eliquis Leaflet 1"]
+    assert citations.invented == []
+
+
 def test_citation_filter_releases_a_long_unclosed_bracket() -> None:
     citations = CitationFilter(set())
     text = "[" + "x" * 100
@@ -113,9 +122,10 @@ def test_select_sources_prefers_the_question_language_and_caps_k() -> None:
     assert "[A SmPC 4.5] Title\ntext of a:smpc:4.5 (el)" in prompt[1]["content"]
 
 
-def test_ask_streams_a_cited_answer() -> None:
+@pytest.mark.parametrize("space", [" ", "\u202f"])
+def test_ask_streams_a_cited_answer(space: str) -> None:
     service = FakeService([_hit("eliquis:smpc:4.5"), _hit("eliquis:smpc:4.3", rank=2)])
-    llm = _llm("Avoid with NSAIDs [Eliquis ", "SmPC 4.5]. Fake [Xarelto SmPC 1].")
+    llm = _llm("Avoid with NSAIDs [Eliquis ", f"SmPC{space}4.5]. Fake [Xarelto SmPC 1].")
     client = TestClient(create_app(settings=Settings(), service=service, generate=llm))  # type: ignore[arg-type]
     response = client.post("/v1/ask", json={"question": "Can I take Eliquis with ibuprofen?"})
     assert response.status_code == 200
@@ -137,8 +147,90 @@ def test_ask_reports_an_llm_failure_as_an_error_event() -> None:
     llm = _llm("Partial", error=LLMError("model: HTTP 401: no key"))
     client = TestClient(create_app(settings=Settings(), service=FakeService(), generate=llm))  # type: ignore[arg-type]
     events = _events(client.post("/v1/ask", json={"question": "q"}).text)
-    assert [name for name, _ in events] == ["safety", "retrieval", "token", "error"]
+    assert [name for name, _ in events] == ["safety", "retrieval", "error"]
     assert events[-1][1] == {"code": "llm_unavailable", "message": "model: HTTP 401: no key"}
+
+
+@pytest.mark.parametrize(
+    "pieces", [("A partial introduction. ", "17", "% at 1 mg. [Ozempic SmPC 4.8]"),
+               ("[quote:", "999]"), ("[quote:1]", " and 19.9% at 0.5 mg.")],
+)
+def test_ask_never_emits_unverified_numerical_tokens(pieces: tuple[str, ...]) -> None:
+    hit = _hit("ozempic:smpc:4.8")
+    hit.text = "Nausea occurred in 17% and 19.9% at 0.5 mg and 1 mg, respectively."
+    client = TestClient(create_app(
+        settings=Settings(), service=FakeService([hit]), generate=_llm(*pieces),
+    ))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What does the source say?"}).text)
+    assert [name for name, _ in events] == ["safety", "retrieval", "error"]
+    assert events[-1][1]["code"] == "numerical_grounding_failed"  # type: ignore[index]
+
+
+def test_ask_renders_a_quote_reference_split_across_provider_tokens() -> None:
+    hit = _hit("ozempic:smpc:4.8")
+    hit.text = "Nausea occurred in 17% and 19.9% at 0.5 mg and 1 mg, respectively."
+    client = TestClient(create_app(
+        settings=Settings(), service=FakeService([hit]), generate=_llm("Reported: [quo", "te:1]"),
+    ))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What does the source say?"}).text)
+    assert [name for name, _ in events] == ["safety", "retrieval", "token", "citations", "done"]
+    assert events[2][1]["text"] == f'Reported: “{hit.text}” [Ozempic SmPC 4.8]'  # type: ignore[index]
+    assert events[-1][1]["refused"] is False  # type: ignore[index]
+
+
+def test_ask_native_selection_renders_only_trusted_sources() -> None:
+    hit = _hit("ozempic:smpc:4.8")
+    hit.text = "Nausea occurred in 17% and 19.9% at 0.5 mg and 1 mg, respectively."
+    client = TestClient(create_app(
+        settings=Settings(llm_source_quotes_only=True), service=FakeService([hit]),
+        generate=_llm('{"quote_', 'ids":["quote:1"]}'),
+    ))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What does the source say?"}).text)
+    text = "".join(data["text"] for name, data in events if name == "token")
+    assert hit.text in text
+    assert "[Ozempic SmPC 4.8]" in text
+    assert 'quote_ids' not in text
+    assert events[-1][0] == "done"
+
+
+def test_native_schema_applies_to_answer_but_not_safety(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    async def provider(
+        settings: Settings, messages: list[dict[str, str]], **kwargs: Any,
+    ) -> AsyncIterator[str]:
+        if messages[0]["content"] == SAFETY_PROMPT:
+            assert "response_format" not in kwargs
+            calls.append("safety")
+            yield "info"
+        else:
+            schema = kwargs["response_format"]["json_schema"]["schema"]
+            assert "quote:1" in schema["properties"]["quote_ids"]["items"]["enum"]
+            calls.append("answer")
+            yield '{"quote_ids":["quote:1"]}'
+
+    monkeypatch.setattr("medleaf.api.app.stream_chat", provider)
+    client = TestClient(create_app(
+        settings=Settings(llm_source_quotes_only=True), service=FakeService(),
+    ))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What does the source say?"}).text)
+    assert calls == ["safety", "answer"]
+    assert events[-1][0] == "done"
+
+
+@pytest.mark.parametrize("raw", [
+    '{"quote_ids":["quote:999"]}', '{"quote_ids":["quote:1"],"answer":"17% at 1 mg"}',
+    '17% at 1 mg', '{"quote_ids":',
+])
+def test_ask_native_selection_never_leaks_invalid_output(raw: str) -> None:
+    client = TestClient(create_app(
+        settings=Settings(llm_source_quotes_only=True),
+        service=FakeService([_hit("ozempic:smpc:4.8")]),
+        generate=_llm(raw),
+    ))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What does the source say?"}).text)
+    assert any(name == "error" for name, _ in events)
+    assert not any(name in {"token", "done"} for name, _ in events)
 
 
 def test_ask_returns_503_when_retrieval_is_down() -> None:
@@ -171,6 +263,23 @@ def test_stream_chat_parses_openai_style_sse() -> None:
     assert _collect(settings, handler) == ["Hel", "lo"]
     assert str(seen[0].url) == "https://openrouter.ai/api/v1/chat/completions"
     assert seen[0].headers["Authorization"] == "Bearer test-key"
+
+
+def test_stream_chat_forwards_native_response_format() -> None:
+    expected = {"type": "json_schema", "json_schema": {"name": "test"}}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["response_format"] == expected
+        return httpx.Response(
+            200, text='data: {"choices":[{"delta":{"content":"{}"}}]}\n\ndata: [DONE]\n\n',
+        )
+
+    async def run() -> list[str]:
+        return [piece async for piece in stream_chat(
+            Settings(), [], transport=httpx.MockTransport(handler), response_format=expected,
+        )]
+
+    assert asyncio.run(run()) == ["{}"]
 
 
 def test_stream_chat_raises_on_provider_errors() -> None:

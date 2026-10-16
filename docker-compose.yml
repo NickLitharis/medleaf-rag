@@ -59,6 +59,7 @@ services:
       MEDLEAF_LLM_API_KEY: ${MEDLEAF_LLM_API_KEY:-${OPENROUTER_API_KEY:-}}
       MEDLEAF_LLM_BASE_URL: ${MEDLEAF_LLM_BASE_URL:-https://openrouter.ai/api/v1}
       MEDLEAF_LLM_MODEL: ${MEDLEAF_LLM_MODEL:-openrouter/free}
+      MEDLEAF_LLM_SOURCE_QUOTES_ONLY: ${MEDLEAF_LLM_SOURCE_QUOTES_ONLY:-false}
       MEDLEAF_DATA_DIR: /app/data
       HF_HOME: /app/data/models
     volumes:

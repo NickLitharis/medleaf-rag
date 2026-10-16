@@ -70,12 +70,13 @@
       "evidence": [
         "Slice 1: POST /v1/ask streams retrieval, token, citations and done (or error) events; the search page has an Ask button. The LLM is reached over the OpenAI-compatible API with httpx (OpenRouter, model openrouter/free by default); see docs/decisions.md.",
         "Invented citation keys are held back and removed before they reach the client, and listed in done.invented_citations and the log (tests/test_m4_answer.py).",
-        "Live check 2026-10-16 via the API container: EN 'Can I take Eliquis with ibuprofen?' -> cited [Eliquis Leaflet 2] (NSAID bleeding risk, says ibuprofen is not named); EL Ozempic storage question -> Greek answer citing SmPC 6.4/6.3/6.6 and Leaflet 5; no invented citations. Search 0.2 s; total 14-93 s, almost all of it the free model."
+        "Live check 2026-10-16 via the API container: EN 'Can I take Eliquis with ibuprofen?' -> cited [Eliquis Leaflet 2] (NSAID bleeding risk, says ibuprofen is not named); EL Ozempic storage question -> Greek answer citing SmPC 6.4/6.3/6.6 and Leaflet 5; no invented citations. Search 0.2 s; total 14-93 s, almost all of it the free model.",
+        "Slice 2A: safety check before retrieval (emergency keyword rules first, then the LLM label with a personal keyword backstop; failure -> personal), safety SSE event, fixed EN/EL redirect messages, and medicine-name filtering (brand, English and Greek substance, accent-insensitive). tests/test_m4_safety.py.",
+        "Live check 2026-10-16: 'I took 20 tablets of Lyrica' -> emergency message in 5 s, no retrieval; Greek pregnancy + Ozempic question -> personal message in 3 s; Greek semaglutide question -> search filtered to ozempic and rybelsus."
       ],
       "remaining_gates": [
-        "Safety layer (info/personal/emergency, keyword backstop) and the safety SSE event",
-        "Medicine-name filter, cross-encoder reranker and score-threshold refusal (live: the paracetamol question was declined in text but still cited a Mounjaro chunk, so done.refused was false)",
-        "S3/S4/S5 measured"
+        "Cross-encoder reranker and score-threshold refusal (live: the Greek semaglutide storage question retrieved no section 6.4 chunk, so the model said the sources had no answer)",
+        "Safety set eval/datasets/safety.jsonl and S3/S4/S5 measured"
       ]
     },
     {

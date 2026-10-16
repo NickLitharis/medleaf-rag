@@ -38,13 +38,18 @@ from medleaf.retrieval.index import (
     IndexMissingError,
     RetrievalUnavailableError,
 )
+from medleaf.retrieval.names import detect_medicines, medicine_names
 from medleaf.retrieval.service import ReadyState, RetrievalService, SearchHit, SearchResponse
+from medleaf.safety.classifier import MESSAGES, Label, classify
 
 DOC_KINDS = Literal["smpc", "leaflet"]
 LANGS = Literal["en", "el"]
 SEARCH_PAGE = Path(__file__).with_name("static") / "index.html"
 Generate = Callable[[list[dict[str, str]]], AsyncIterator[str]]
 log = logging.getLogger("medleaf.ask")
+if not log.handlers:  # uvicorn only configures its own loggers; SPEC §9 logs every label
+    log.addHandler(logging.StreamHandler())
+    log.setLevel(logging.INFO)
 
 
 class MedicineOption(BaseModel):
@@ -230,12 +235,21 @@ def create_app(
     async def ask(request: AskRequest) -> StreamingResponse:
         """Question → cited answer, streamed as Server-Sent Events.
 
-        Events: ``retrieval``, ``token`` (repeated), ``citations``, ``done``; or ``error``
-        in place of the rest. The safety check (SPEC §9) is not wired in yet, so there is
-        no ``safety`` event.
+        Events: ``safety``, ``retrieval``, ``token`` (repeated), ``citations``, ``done``;
+        or ``error`` in place of the rest. A ``personal`` or ``emergency`` question gets a
+        fixed message and never reaches retrieval.
         """
         started = time.perf_counter()
         lang = request.lang or detect_lang(request.question)
+        label, source = await classify(request.question, llm)
+        log.info("ask safety: label=%s source=%s", label, source)
+        if label != "info":
+            return StreamingResponse(
+                _redirect_events(label, lang, started),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        named = detect_medicines(request.question, _names(retriever))
         # Search runs before the stream opens, so a broken index is still a plain 503.
         found = await run_in_threadpool(
             partial(
@@ -243,7 +257,7 @@ def create_app(
                 retriever,
                 query=request.question,
                 lang=None,  # both languages; the answer is written in ``lang``
-                medicine=None,
+                medicine=named or None,
                 doc=None,
                 active_substance=None,
                 corpus_version=None,
@@ -260,6 +274,30 @@ def create_app(
     return app
 
 
+def _names(retriever: RetrievalService) -> dict[str, list[str]]:
+    """Medicine names from the manifest; none when it is missing (the search then 503s)."""
+    try:
+        manifest = retriever.manifest()
+    except IndexMissingError:
+        return {}
+    return medicine_names(manifest.medicines, manifest.active_substances)
+
+
+async def _redirect_events(label: Label, lang: str, started: float) -> AsyncIterator[str]:
+    yield _sse("safety", {"label": label})
+    yield _sse("token", {"text": MESSAGES[label][lang]})
+    yield _sse("citations", [])
+    yield _sse(
+        "done",
+        {
+            "trace_id": uuid.uuid4().hex,
+            "latency_ms": round((time.perf_counter() - started) * 1000),
+            "refused": True,
+            "disclaimer": DISCLAIMERS[lang],
+        },
+    )
+
+
 async def _answer_events(
     question: str,
     lang: str,
@@ -268,6 +306,7 @@ async def _answer_events(
     started: float,
 ) -> AsyncIterator[str]:
     trace_id = uuid.uuid4().hex
+    yield _sse("safety", {"label": "info"})
     yield _sse(
         "retrieval",
         [{"chunk_id": hit.chunk_id, "lang": hit.lang, "score": hit.score} for hit in sources],

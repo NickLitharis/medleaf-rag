@@ -136,10 +136,16 @@ async def classify(question: str, llm: Generate) -> tuple[Label, str]:
         {"role": "system", "content": SAFETY_PROMPT},
         {"role": "user", "content": question},
     ]
-    try:
-        reply = "".join([piece async for piece in llm(messages)])
-    except LLMError:
-        return "personal", "fallback"
+    # ponytail: one retry for a slow provider; add backoff if it keeps timing out.
+    for attempt in range(2):
+        try:
+            reply = "".join([piece async for piece in llm(messages)])
+            break
+        except LLMError:
+            if attempt == 0:
+                continue
+            # A matched personal rule is already a safe, fixed redirect.
+            return ("personal", "keywords") if rule == "personal" else ("personal", "fallback")
     found = LABEL_WORD.search(reply.casefold())
     if found is None:
         return "personal", "fallback"

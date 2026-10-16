@@ -92,6 +92,20 @@ def test_classify_falls_back_to_personal() -> None:
     assert asyncio.run(classify("q", _reply("not sure"))) == ("personal", "fallback")
     failing = _reply(error=LLMError("timeout"))
     assert asyncio.run(classify("q", failing)) == ("personal", "fallback")
+    assert len(failing.calls) == 2  # retried once
+    assert asyncio.run(classify("Should I stop Eliquis?", failing)) == ("personal", "keywords")
+
+
+def test_classify_recovers_after_one_timeout() -> None:
+    attempts: list[int] = []
+
+    async def flaky(messages: list[dict[str, str]]) -> AsyncIterator[str]:
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise LLMError("timeout")
+        yield "info"
+
+    assert asyncio.run(classify("What is Eliquis?", flaky)) == ("info", "llm")
 
 
 NAMES = medicine_names(

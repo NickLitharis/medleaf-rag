@@ -171,13 +171,17 @@ valid key. In PowerShell, configure one before you start the API:
 ```powershell
 # NVIDIA NIM developer endpoint. Availability and request limits can change.
 $env:MEDLEAF_LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
-$env:MEDLEAF_LLM_MODEL = "openai/gpt-oss-20b"
+$env:MEDLEAF_LLM_MODEL = "nvidia/nemotron-3-super-120b-a12b"
 # Extractive answers: the model selects source lines; the server displays them.
 $env:MEDLEAF_LLM_SOURCE_QUOTES_ONLY = "true"
 $env:MEDLEAF_LLM_API_KEY = "<your-nvidia-key>"
 docker compose up -d --build api
 Start-Process "http://127.0.0.1:8000/"
 ```
+
+NVIDIA retired `openai/gpt-oss-120b` on 2026-09-03, and `openai/gpt-oss-20b` timed
+out on every call on 2026-10-16, so the demo now uses Nemotron 3 Super. The recorded
+runs below used `gpt-oss-20b`.
 
 Without these overrides, Compose uses OpenRouter and `openrouter/free`.
 That router can select different underlying free models; it does not pin one

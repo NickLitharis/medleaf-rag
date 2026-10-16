@@ -1,11 +1,15 @@
 # MedLeaf RAG
 
 [![CI](https://github.com/NickLitharis/medleaf-rag/actions/workflows/ci.yml/badge.svg)](https://github.com/NickLitharis/medleaf-rag/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Ask questions about EU medicines in Greek or English and get answers quoted from
 official EMA documents, with a link to every source.**
 Hybrid search (dense + keyword) over 8,797 chunks from 40 medicines, with safety
 redirects for personal-treatment and emergency questions.
+
+**Stack:** Python 3.11 · FastAPI · Qdrant · sentence-transformers (multilingual-e5) ·
+OpenAI-compatible LLM API · Docker Compose · GitHub Actions
 
 <p>
   <img src="docs/demo-en.jpg" alt="English question about Eliquis answered with quoted, cited EMA excerpts" width="49%">
@@ -33,70 +37,93 @@ You need only Docker (with Compose) and about 4 GB of free disk space. Search wo
 without any key. Ask needs an OpenAI-compatible LLM key; a free
 [NVIDIA developer key](https://build.nvidia.com/) works.
 
-```bash
-git clone https://github.com/NickLitharis/medleaf-rag.git
-cd medleaf-rag
+1. Clone the repo and create your settings file:
 
-# 1. Optional, for Ask: put your LLM settings in .env (gitignored; Compose reads it).
-cat > .env <<'EOF'
-MEDLEAF_LLM_BASE_URL=https://integrate.api.nvidia.com/v1
-MEDLEAF_LLM_MODEL=nvidia/nemotron-3-super-120b-a12b
-MEDLEAF_LLM_SOURCE_QUOTES_ONLY=true
-MEDLEAF_LLM_API_KEY=<your-nvidia-key>
-EOF
+   ```bash
+   git clone https://github.com/NickLitharis/medleaf-rag.git
+   cd medleaf-rag
+   cp .env.example .env      # PowerShell: Copy-Item .env.example .env
+   ```
 
-# 2. Download the 80 EMA PDFs (~185 MB, checksums pinned in data/medicines.yaml).
-docker compose run --rm indexer python -m medleaf.cli download --workers 2
+   For Ask, set `MEDLEAF_LLM_API_KEY=` in `.env` to your key. `.env` is gitignored,
+   and Compose reads it automatically.
 
-# 3. Build the index once (about 75 minutes on CPU; downloads a 1 GB embedding model).
-docker compose run --rm indexer
+2. Download the 80 EMA PDFs (about 185 MB; checksums are pinned in
+   `data/medicines.yaml`). The first run also builds the 2 GB Docker image.
 
-# 4. Start the API and open http://127.0.0.1:8000/
-docker compose up -d api
-```
+   ```bash
+   docker compose run --rm indexer python -m medleaf.cli download --workers 2
+   ```
+
+3. Build the index once. This takes about 75 minutes on CPU and downloads a 1 GB
+   embedding model.
+
+   ```bash
+   docker compose run --rm indexer
+   ```
+
+4. Start the API and open <http://127.0.0.1:8000/>.
+
+   ```bash
+   docker compose up -d api
+   ```
 
 The first question after a start loads the embedding model and takes about a minute.
-`docker compose down` stops everything; the index stays in `data/` and the Qdrant
-volume, so step 4 alone restarts the demo. More detail is under
-[Docker Compose](#docker-compose) and [Try the local demo](#try-the-local-demo).
+`docker compose down` stops everything. The index stays in `data/` and the Qdrant
+volume, so step 4 alone restarts the demo.
 
-Bilingual (Greek / English) question answering over official EU medicine
-information, with cited answers and medical safety guardrails. The local demo
-covers 40 centrally authorised medicines in both languages. It combines dense
-and sparse retrieval through `/v1/search` and sends answer events through `/v1/ask`.
-Generated text is checked before display; it is not shown token by token.
-Open `http://127.0.0.1:8000/` after startup to use the browser demo.
-A retrieval evaluation set gates every PR. Full answer evaluation is still pending.
-See `SPEC.md` for the original milestone plan.
+## What works
 
-## Status
+- **Bilingual hybrid retrieval.** Dense e5 embeddings and sparse keyword vectors with
+  Greek accent folding and suffix stemming, fused with RRF. On the held-out eval set,
+  Recall@5 is 84.2% (dev, 48/57) and 86.0% (test, 49/57).
+- **Cited answers.** In extractive mode the model only picks source lines by ID. The
+  server shows the original EMA text with a citation link.
+- **Safety first.** Emergency questions get a fixed reply with EU and Greek emergency
+  numbers, without calling the LLM. Personal-treatment questions are redirected to a
+  doctor or pharmacist.
+- **Number guard.** The server blocks an answer that contains digits not found in the
+  quoted sources.
+- **CI.** Lint and fast tests run on every push. A retrieval eval gate
+  (`.github/workflows/eval-retrieval.yml`) fails a PR that loses more than one
+  Recall@5 hit.
 
-- **M1 — download + parse for five medicines (EN + EL):** complete. Evidence in
-  `docs/M1-acceptance.md`.
-- **M2 — 40 medicines, hybrid retrieval, `/v1/search`, Docker Compose:** complete.
-  The rebuilt index has 8797 chunks, none over the model window, and all ten sample
-  questions hit the expected section. Evidence in `docs/M2-acceptance.md`.
-- **M3 — eval dataset v1, runner, retrieval gate:** in progress. 126 questions over
-  dev/test medicines; dev baseline Recall@5 48/57 (84.2%), test 49/57 (86.0%).
-  `.github/workflows/eval-retrieval.yml` fails a PR that loses more than one Recall@5
-  hit. Still to show: the gate failing a real broken PR on GitHub. Run it locally with
-  `PYTHONPATH=src python -m medleaf.cli eval --split dev --baseline eval/baseline.json`.
-  Decisions in `docs/decisions.md`.
-- **M4 — local answering demo:** implemented slices include streamed answers, EMA
-  citation links, Greek/English detection, safety redirects and citation filtering.
-  Numerical source-quote references are expanded by the server; raw generated digits
-  are blocked before display. Full M4 acceptance is still pending.
-- **M5–M7:** not complete. Tracing, full answer evaluation, optional fine-tuning
-  and release evidence are not prerequisites for trying this local demo.
+## What's next
 
-## Setup
+- A downloadable index snapshot, so the quick start skips the 75-minute build.
+- Better Greek ranking: saturated (BM25-style) term weights on the sparse vectors.
+- Answer-quality evaluation with a real model, beyond the targeted numerical checks.
+
+The original milestone plan is in `SPEC.md`; design decisions are in `docs/decisions.md`.
+
+## Try these questions
+
+Ask detects the answer language from the question. The dropdown filters apply only to
+Search.
+
+- `What is Eliquis used for?`: an English answer with EMA source links.
+- `Ποιες είναι οι ανεπιθύμητες ενέργειες του Ozempic;`: the Greek path.
+- `Should I stop taking Eliquis?`: a personal-treatment redirect.
+- `I took too many Eliquis tablets`: an emergency redirect, with no LLM call.
+- `What does the product information say about Eliquis curing the common cold?`:
+  an unsupported claim. The expected answer is that the sources do not cover it.
+
+## Medical disclaimer
+
+This project is not medical advice and is not a substitute for a doctor or
+pharmacist. Do not use it to decide on a dose, to stop or change a medicine, or in
+an emergency. In an emergency in the EU, call 112.
+
+## Development
 
 Python 3.11 or later. The retrieval stack (torch, sentence-transformers, Qdrant
 client, FastAPI) is an extra, so a plain checkout stays light:
 
 ```bash
-python -m pip install -e ".[dev]"          # lint, type checks and the fast tests
+python -m pip install -e ".[dev]"            # lint, type checks and the fast tests
 python -m pip install -e ".[api,retrieval]"  # index build + API
+python -m pytest -q                          # fast tests, in-memory Qdrant
+python -m ruff check .
 ```
 
 On a machine that already has a CPU torch, a virtualenv with
@@ -110,191 +137,142 @@ uv pip install --python .venv/Scripts/python.exe -e ".[api,retrieval,dev]"
 The embedding model is pinned by commit in `MEDLEAF_EMBED_REVISION`, downloaded to
 `data/models` and recorded in the index manifest.
 
-## Checks
+<details>
+<summary><b>Build the index and search without Docker for the API</b></summary>
 
 ```bash
-PYTHONPATH=src python -m pytest -q          # fast tests, in-memory Qdrant
-python -m ruff check .
+# 1. Download the corpus pinned in data/medicines.yaml (respects EMA rate limits).
+#    To re-resolve the URLs from EMA, run `medleaf resolve --continue-on-error` with
+#    the names in data/corpus-request.txt, which also lists names EMA would not resolve.
+medleaf download --workers 2
+
+# 2. Run an isolated Qdrant and build the hybrid index
+docker run -d --name medleaf-qdrant -p 127.0.0.1:6333:6333 qdrant/qdrant:v1.15.5
+medleaf index build
+medleaf index status
+
+# 3. Search from the CLI or the HTTP API
+medleaf search "What are the contraindications of Eliquis?" --lang en
+uvicorn medleaf.api.app:create_app --factory --port 8000
+curl "http://127.0.0.1:8000/v1/search?query=contraindications+of+Eliquis&lang=en&medicine=eliquis"
+
+# 4. Retrieval eval gate on the dev split
+medleaf eval --split dev --baseline eval/baseline.json
 ```
 
-The ten real EMA PDFs are not committed (`data/raw/` is ignored). To run the
-corpus checks, download them first and then opt in:
+Every response carries full provenance (`chunk_id`, `source_url`, `revision_date`,
+`corpus_version`). A missing index, an index built with another tokenizer version, an
+unreachable Qdrant or a model that cannot load returns HTTP 503 with an `error` code.
+The API never answers 200 with an empty list to hide a broken index.
+
+The real EMA PDFs are not committed (`data/raw/` is ignored). The M1 corpus checks
+are opt-in once the PDFs are downloaded:
 
 ```bash
-PYTHONPATH=src python -m medleaf.cli resolve Eliquis Humira Jardiance Ozempic Xarelto
-PYTHONPATH=src python -m medleaf.cli download
-MEDLEAF_M1_CORPUS=1 PYTHONPATH=src python -m pytest tests/test_m1_acceptance.py -q
+MEDLEAF_M1_CORPUS=1 python -m pytest tests/test_m1_acceptance.py -q
 ```
 
-### Targeted numerical checks
+</details>
 
-`eval/answer-faithfulness.json` holds attributed English and Greek EMA excerpts
-for the observed Ozempic dose–percentage reversal. Offline tests reject the swapped
-answer, a correct quote followed by a swapped claim, and empty answers.
+<details>
+<summary><b>Docker Compose details</b></summary>
 
-The six optional real-provider cases cover general, numerical and misleading
-questions in both languages. Configure the provider variables shown under
-“Try the local demo”, then run:
+Compose binds Qdrant and the API to loopback only. The indexer runs as a one-shot
+profile, so `docker compose up` never rebuilds the index by accident. `data/` is
+mounted from the host, so the corpus and the built index are not baked into images.
+Both `indexer` and `api` use `pull_policy: build`, so every `run`/`up` rebuilds the
+image from the current checkout first. A full index build fills a new collection and
+swaps the `medleaf_chunks` alias only when it finishes, so the API keeps serving
+meanwhile.
 
-```powershell
-$env:PYTHONPATH = "src"
-$env:MEDLEAF_LIVE_FAITHFULNESS = "1"
-python -m pytest tests/test_m4_faithfulness.py -q -s -k live
-Remove-Item Env:MEDLEAF_LIVE_FAITHFULNESS
+Compose takes the LLM settings from `.env` or your shell. Without them it uses
+OpenRouter and `openrouter/free`, which can route to different free models. The key
+comes from `MEDLEAF_LLM_API_KEY` or `OPENROUTER_API_KEY`. `docker compose restart api`
+keeps the current container settings; `docker compose up` reads them again.
+
+</details>
+
+<details>
+<summary><b>How answers are checked</b></summary>
+
+The API sends answers as Server-Sent Events, but the server collects the full model
+response and checks it before any text is shown.
+
+- **Extractive mode** (`MEDLEAF_LLM_SOURCE_QUOTES_ONLY=true`, used by the demo): native
+  JSON-schema output limits the model to at most five existing source-line IDs. The
+  server checks the JSON shape, ID types, count and values before rendering. An empty
+  selection produces a fixed abstention. Use it only on a provider that supports the
+  requested JSON schema; there is no silent fallback to unstructured output.
+- **Normal mode** (`false`, the Compose default): the model writes prose. The server
+  replaces `[quote:N]` references with the original source lines and their citations,
+  and removes invented citation keys.
+- **Numbers:** if the model writes digits outside valid citations or quote references,
+  or picks an unknown quote reference, the server emits `numerical_grounding_failed`
+  and shows nothing. This also rejects harmless numbered lists, on purpose.
+- **Safety check:** the LLM labels each question, and keyword rules can only raise the
+  label to a safer one. The call is retried once. If it still fails, a question that
+  matched a personal rule gets the personal redirect; any other question returns HTTP
+  503 `safety_unavailable`. A provider failure while answering produces an SSE `error`
+  event.
+
+The page reports index readiness only. It does not promise that the LLM provider is
+available.
+
+</details>
+
+<details>
+<summary><b>Targeted numerical checks</b></summary>
+
+`eval/answer-faithfulness.json` holds attributed English and Greek EMA excerpts for an
+observed Ozempic dose–percentage reversal. Offline tests reject the swapped answer, a
+correct quote followed by a swapped claim, and empty answers.
+
+Six optional real-provider cases cover general, numerical and misleading questions in
+both languages. With the LLM settings in `.env`:
+
+```bash
+MEDLEAF_LIVE_FAITHFULNESS=1 python -m pytest tests/test_m4_faithfulness.py -q -s -k live
 ```
 
 These tests use fixed context, without Qdrant or the safety classifier. They check
 source-quote preservation and citation presence, not retrieval quality or general
-medical accuracy. Explicit numerical questions must include the expected source
-sentence; general questions can use a cited qualitative summary. Each live case
-has a sixty-second deadline so provider reasoning cannot stall the check indefinitely.
+medical accuracy. Each live case has a sixty-second deadline.
 
-With `MEDLEAF_LLM_SOURCE_QUOTES_ONLY=true`, the retained conservative NVIDIA
-`openai/gpt-oss-20b` mode passed the six quote cases in 42.82 seconds. Two further
-live cases remove the nausea evidence and require abstention. English passed;
-Greek timed out before passing one bounded retry. The full live gate is therefore
-not reliably green. These tests do not establish clinical or full-app acceptance.
-Normal generated answers passed only three of six cases in a separate run;
-low reasoning effort failed all six and was not adopted.
+The recorded runs used NVIDIA `openai/gpt-oss-20b`. In extractive mode it passed the
+six quote cases in 42.82 seconds. Of two abstention cases, English passed and Greek
+timed out. Normal generation passed three of six. NVIDIA retired `gpt-oss-120b` on
+2026-09-03, and `gpt-oss-20b` timed out on every call on 2026-10-16, so the demo now
+uses `nvidia/nemotron-3-super-120b-a12b`. These checks have not been re-run on it.
 
-## Build the index and search
+</details>
 
-```bash
-# 1. Resolve and download the 40-medicine corpus (network, respects EMA rate limits).
-#    data/corpus-request.txt also lists the names EMA would not resolve, with reasons.
-PYTHONPATH=src python -m medleaf.cli resolve --continue-on-error \
-    $(grep -v '^#' data/corpus-request.txt | tr '\n' ' ')
-PYTHONPATH=src python -m medleaf.cli download --workers 2
-
-# 2. Run an isolated Qdrant and build the hybrid index
-docker run -d --name medleaf-qdrant -p 127.0.0.1:6333:6333 qdrant/qdrant:v1.15.5
-PYTHONPATH=src python -m medleaf.cli index build
-PYTHONPATH=src python -m medleaf.cli index status
-
-# 3. Search from the CLI or the HTTP API
-PYTHONPATH=src python -m medleaf.cli search "What are the contraindications of Eliquis?" --lang en
-PYTHONPATH=src uvicorn medleaf.api.app:create_app --factory --port 8000
-curl "http://127.0.0.1:8000/v1/search?query=contraindications+of+Eliquis&lang=en&medicine=eliquis"
-```
-
-Every response carries full provenance (`chunk_id`, `source_url`, `revision_date`,
-`corpus_version`). A missing index, an unreachable Qdrant or a model that cannot load
-return HTTP 503 with an `error` code — the API never answers 200 with an empty list to
-hide a broken index.
-
-## Docker Compose
-
-```bash
-docker compose run --rm indexer        # build the index inside the stack
-docker compose up -d api
-curl "http://127.0.0.1:8000/v1/search?query=contraindications+of+Eliquis&lang=en"
-```
-
-Compose binds Qdrant and the API to loopback only, and the indexer runs as a one-shot
-profile so `docker compose up` never rebuilds the index by accident. `data/` is mounted
-from the host, so the corpus and the built index are not baked into images. Both
-`indexer` and `api` use `pull_policy: build`, so every `run`/`up` rebuilds the image
-from the current checkout first; a full index build fills a new collection and swaps
-the `medleaf_chunks` alias only when it finishes, so the API keeps serving meanwhile.
-
-## Try the local demo
-
-The steps below require the downloaded corpus and an existing index. On a new
-machine, first follow the index instructions above. The first search loads the
-embedding model and can take about a minute.
-
-Search works without an LLM key. Ask needs an OpenAI-compatible provider and a
-valid key. In PowerShell, configure one before you start the API:
-
-```powershell
-# NVIDIA NIM developer endpoint. Availability and request limits can change.
-$env:MEDLEAF_LLM_BASE_URL = "https://integrate.api.nvidia.com/v1"
-$env:MEDLEAF_LLM_MODEL = "nvidia/nemotron-3-super-120b-a12b"
-# Extractive answers: the model selects source lines; the server displays them.
-$env:MEDLEAF_LLM_SOURCE_QUOTES_ONLY = "true"
-$env:MEDLEAF_LLM_API_KEY = "<your-nvidia-key>"
-docker compose up -d --build api
-Start-Process "http://127.0.0.1:8000/"
-```
-
-NVIDIA retired `openai/gpt-oss-120b` on 2026-09-03, and `openai/gpt-oss-20b` timed
-out on every call on 2026-10-16, so the demo now uses Nemotron 3 Super. The recorded
-runs below used `gpt-oss-20b`.
-
-Without these overrides, Compose uses OpenRouter and `openrouter/free`.
-That router can select different underlying free models; it does not pin one
-model for evaluations. The current local runtime uses the NVIDIA overrides above.
-Its key comes from `MEDLEAF_LLM_API_KEY` or `OPENROUTER_API_KEY`.
-Do not commit credentials. `docker compose restart api` preserves the current
-container configuration. A later `docker compose up` reads the shell variables again.
-
-Select a sample question, then select Ask or Search. Ask detects the answer
-language from the question. The dropdown filters apply only to Search.
-
-The NVIDIA setup above uses extractive answers: original source excerpts, not a
-generated clinical explanation. Native JSON-schema output limits the model to
-at most five existing source-line IDs. The server also checks the JSON shape,
-ID types, count and values before rendering any text. An empty selection produces
-a fixed abstention. Source relevance and extraction accuracy are not verified.
-Set `MEDLEAF_LLM_SOURCE_QUOTES_ONLY=false` to use normal generation; false is
-the Compose default. Enable extractive mode only on a provider that supports
-the requested JSON schema. There is no silent fallback to unstructured output.
-
-Try these paths:
-
-- Ask `What is Eliquis used for?` for an English answer with EMA source links.
-- Ask `Ποιες είναι οι ανεπιθύμητες ενέργειες του Ozempic;` to check the Greek path.
-  The conservative mode abstained on this question in the recorded browser run.
-- Ask `Should I stop taking Eliquis?` for a personal-treatment redirect.
-- Ask `I took too many Eliquis tablets` for an emergency redirect without an LLM call.
-- Ask `What does the product information say about Eliquis curing the common cold?`
-  for an unsupported-claim example. Inspect the answer rather than assuming a refusal.
-
-If the safety model fails or returns an invalid label, Ask returns HTTP 503 with
-`safety_unavailable`. Use Search to read the official documents instead. A provider
-failure during answer generation produces an SSE `error` event, not a completed answer.
-The server collects the response before displaying text. It replaces `[quote:N]`
-references with the original retrieved source lines and their citations. If the model
-writes digits outside valid citations or quote references, or selects an unknown
-quote reference, it emits `numerical_grounding_failed` without showing the answer.
-This also rejects harmless numbered lists; it deliberately prefers withholding text
-to exposing unverified figures. Quoted text stays in its source language.
-The page reports index readiness only. It does not promise that the LLM provider is available.
-
-### Current limits
+<details>
+<summary><b>Known limits</b></summary>
 
 This is a local portfolio demo, not a clinical tool or a quality-approved release.
-Citation filtering removes invented source keys. It does not establish that a
-sentence agrees with the cited text.
 
-A live Greek test reversed the dose associations for nausea percentages in the
-Ozempic source: 17% belongs to 0.5 mg, and 19.9% to 1 mg. The answer reversed them.
-The numerical regression dataset and source-quote safeguard address this kind of
-rewriting, but do not establish clinical reliability. The model can still select an
-irrelevant quote. In normal generation mode, qualitative explanations and
-spelled-out numbers are not verified. Extractive mode does not generate that
-prose, but mistakes already present in extracted source text remain.
-Broader real-model evaluation is still required before release.
-Do not use generated answers for treatment decisions. Read the linked EMA source.
+- Citation filtering removes invented source keys. It does not prove that a sentence
+  agrees with the cited text.
+- The model can select an irrelevant quote, and mistakes already in the source text
+  remain.
+- In normal mode, qualitative explanations and spelled-out numbers are not verified.
+- A live Greek test once reversed the Ozempic nausea rates (17% belongs to 0.5 mg,
+  19.9% to 1 mg). The numerical checks and the number guard target this kind of error,
+  but they do not establish clinical reliability.
+- Greek retrieval still misses some answers: sparse term weights are not saturated,
+  so a long chunk that repeats the medicine name can outrank the right one. Notes are
+  in `docs/branches/fix-greek-stemming.md`.
+- Latency depends on the free LLM provider: 2–30 seconds per answer in recent runs,
+  plus about a minute for the first question after a start.
 
-The retained mode completed eight browser requests. Five produced the expected
-cited answer or safety redirect. Three Greek requests abstained, including one
-with useful evidence available. English numerical and misleading questions took
-5.64 and 14.89 seconds; the first English answer took 50.17 seconds after a cold
-start. Personal and emergency redirects took 1.04 and 0.52 seconds. These are
-single requests, not benchmarks or successful multilingual acceptance. Greek
-retrieval coverage, selection precision and provider latency still need work.
+Do not use answers for treatment decisions. Read the linked EMA source.
 
-## Medical disclaimer
-
-This project is not medical advice and is not a substitute for a doctor or
-pharmacist. Do not use it to decide on a dose, to stop or change a medicine, or in
-an emergency. In an emergency in the EU, call 112.
+</details>
 
 ## Licence and attribution
 
-The code licence and the corpus licence are different. The medicine-information
-PDFs and the text extracted from them are **copyright of the European Medicines
-Agency (EMA)** and are not covered by any code licence; every copy must
-acknowledge EMA as the source. The recorded EMA legal terms are in
-`docs/M1-acceptance.md`. This repository claims no legal or clinical clearance.
+The code is released under the [MIT License](LICENSE). The medicine-information PDFs
+and the text extracted from them are **copyright of the European Medicines Agency
+(EMA)** and are not covered by the code licence; every copy must acknowledge EMA as
+the source. The recorded EMA legal terms are in `docs/M1-acceptance.md`. This
+repository claims no legal or clinical clearance.

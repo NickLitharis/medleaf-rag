@@ -32,3 +32,22 @@ Short log of choices that are not obvious from the code. Newest last.
 - **Skipped for now:** MLflow logging and `configs/best.yaml`. There is one retrieval
   configuration and MLflow is not a dependency yet. Add both when M5's reranker gives a
   second configuration to compare.
+
+## 2026-10-16 — M4 slice 1: cited answers
+
+- **The LLM is called over the OpenAI-compatible chat API with `httpx`, not LiteLLM**
+  (SPEC §7). OpenRouter, OpenAI and Ollama all accept the same `/chat/completions`
+  stream, so one 40-line function keeps the provider swappable through
+  `MEDLEAF_LLM_BASE_URL` / `MEDLEAF_LLM_MODEL` without LiteLLM's large dependency tree.
+  Revisit if a provider without that API is needed. Default: OpenRouter, model
+  `openrouter/free`; the key is read from `OPENROUTER_API_KEY` or `MEDLEAF_LLM_API_KEY`.
+- **The 30 s LLM timeout bounds each wait** (connect, and the gap between tokens), not
+  the whole answer, so a long answer that keeps streaming is not cut off.
+- **Invented citations are removed before they reach the client.** Text after `[` is
+  held until `]` arrives and the key is checked against the six sources; unknown keys
+  are dropped and listed in `done.invented_citations` and the log.
+- **`/v1/ask` searches both languages** (top 20, no filters) and keeps six distinct
+  chunks, preferring the question language's version of a chunk found in both.
+- **Not in slice 1:** the safety check (no `safety` event yet), medicine-name filtering,
+  the cross-encoder reranker and the score-threshold refusal. Until then `done.refused`
+  means "the answer has no valid citation".

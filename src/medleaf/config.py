@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -58,6 +58,19 @@ class Settings(BaseSettings):
     sparse_vector_name: str = Field(default="sparse")
     prefetch_limit: int = Field(default=30)
     default_limit: int = Field(default=10)
+
+    # --- Generation (M4). Any OpenAI-compatible chat API: OpenRouter, OpenAI, Ollama. ---
+    llm_base_url: str = Field(default="https://openrouter.ai/api/v1")
+    llm_model: str = Field(default="openrouter/free")
+    llm_api_key: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("MEDLEAF_LLM_API_KEY", "OPENROUTER_API_KEY"),
+        description="Read from the environment only; never commit it.",
+    )
+    llm_timeout_s: float = Field(default=30.0)
+    ask_search_limit: int = Field(
+        default=20, description="Chunks retrieved per question before picking the sources."
+    )
 
     def pdf_path(self, slug: str, lang: str) -> Path:
         """Path of one downloaded PDF, matching ``ingest.download.download_medicine``."""

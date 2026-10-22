@@ -423,6 +423,7 @@ def _cmd_index_build(args: argparse.Namespace, settings: Settings) -> int:
             recreate=not args.no_recreate,
             reuse_cache=not args.no_cache,
             allow_missing=args.allow_missing,
+            allow_checksum_mismatch=args.allow_checksum_mismatch,
         )
     except IndexBuildError as error:
         print(f"index build failed: {error}", file=sys.stderr)
@@ -670,6 +671,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-missing",
         action="store_true",
         help="record missing PDFs in the manifest instead of aborting",
+    )
+    index_build.add_argument(
+        "--allow-checksum-mismatch",
+        action="store_true",
+        help="index PDFs whose SHA-256 does not match the pin in data/medicines.yaml",
     )
     index_build.set_defaults(func=_cmd_index_build)
     index_status = index_sub.add_parser("status", help="print the index manifest and readiness")

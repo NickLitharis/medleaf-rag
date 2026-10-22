@@ -22,7 +22,7 @@ from medleaf.config import Settings
 from medleaf.ingest.chunk import ChunkBudget, build_sections, split_long_text
 from medleaf.ingest.pipeline import PARSER_CACHE_VERSION
 from medleaf.ingest.store import load_medicines
-from medleaf.models import DocKind, Lang, Section
+from medleaf.models import DocKind, DocumentRef, Lang, Medicine, Section
 from medleaf.retrieval.embed import (
     PASSAGE_PREFIX,
     QUERY_PREFIX,
@@ -40,6 +40,7 @@ from medleaf.retrieval.index import (
     write_manifest,
 )
 from medleaf.retrieval.pipeline import (
+    IndexBuildError,
     ParsedCache,
     cache_is_valid,
     parse_with_cache,
@@ -459,6 +460,40 @@ def test_cache_is_valid_only_when_pdf_parser_and_budget_all_match() -> None:
         _cached(budget_label="other"), pdf_sha256="a" * 64, budget_label="budget-1"
     ), "a different embedding window must invalidate the cache"
     assert PARSER_CACHE_VERSION, "the parser cache version must be set"
+
+
+def _pinned_medicine(sha256: str) -> Medicine:
+    return Medicine(
+        slug="demo",
+        name="Demo",
+        active_substance="demo",
+        epar_url="https://www.ema.europa.eu/en/medicines/human/EPAR/demo",
+        documents={
+            lang: DocumentRef(
+                lang=lang,
+                url=(
+                    "https://www.ema.europa.eu/"
+                    f"{lang.value}/documents/product-information/"
+                    f"demo-epar-product-information_{lang.value}.pdf"
+                ),
+                sha256=sha256,
+            )
+            for lang in (Lang.EN, Lang.EL)
+        },
+    )
+
+
+def test_pinned_checksum_mismatch_aborts_before_parsing(tmp_path: Path) -> None:
+    """A changed PDF must not be indexed under the old corpus pin."""
+    settings = Settings(data_dir=tmp_path, corpus_version="test")
+    pdf = settings.pdf_path("demo", "en")
+    pdf.parent.mkdir(parents=True)
+    pdf.write_bytes(b"not the pinned PDF")
+    medicine = _pinned_medicine("a" * 64)
+
+    with pytest.raises(IndexBuildError, match="is pinned to"):
+        parse_with_cache(settings, medicine, Lang.EN, budget=_word_budget(512))
+    assert not settings.parsed_path("demo", "en").exists(), "no cache for a rejected PDF"
 
 
 def test_resolved_corpus_version_prefers_an_explicit_setting(tmp_path: Path) -> None:

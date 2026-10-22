@@ -53,6 +53,10 @@ class IndexBuildError(RuntimeError):
     """The index cannot be built as requested (usually missing source documents)."""
 
 
+class ChecksumMismatchError(IndexBuildError):
+    """A downloaded PDF does not match the SHA-256 pinned in ``medicines.yaml``."""
+
+
 class ParsedCache(BaseModel):
     """Cached parse of one PDF, valid only for the inputs it was parsed from."""
 
@@ -151,14 +155,29 @@ def parse_with_cache(
     *,
     budget: ChunkBudget,
     reuse_cache: bool = True,
+    allow_checksum_mismatch: bool = False,
 ) -> ParseResult:
-    """Return the chunks for one PDF, parsing only when the cache is not valid."""
+    """Return the chunks for one PDF, parsing only when the cache is not valid.
+
+    A pinned checksum is enforced before the parse cache is consulted, so a changed
+    PDF cannot reach the index under the old corpus pin. ``allow_checksum_mismatch``
+    is the explicit opt-out for an intentional, locally reviewed re-download.
+    """
     pdf_path = settings.pdf_path(medicine.slug, lang.value)
     if not pdf_path.exists():
         msg = f"missing source PDF {pdf_path}"
         raise IndexBuildError(msg)
     corpus_version = resolved_corpus_version(settings)
     digest = sha256_of(pdf_path)
+    document = medicine.documents.get(lang)
+    pinned = document.sha256 if document is not None else None
+    if pinned is not None and digest != pinned and not allow_checksum_mismatch:
+        msg = (
+            f"{pdf_path} has sha256 {digest}, but {medicine.slug}:{lang.value} is pinned "
+            f"to {pinned}; re-download with `medleaf download`, update the pin, or pass "
+            "--allow-checksum-mismatch after reviewing the change"
+        )
+        raise ChecksumMismatchError(msg)
     cache_path = settings.parsed_path(medicine.slug, lang.value)
     if reuse_cache and cache_path.exists():
         cached = _read_cache(cache_path)
@@ -197,17 +216,29 @@ def parse_corpus(
     *,
     budget: ChunkBudget,
     reuse_cache: bool = True,
+    allow_checksum_mismatch: bool = False,
     progress: Callable[[str], None] = lambda _line: None,
 ) -> tuple[list[ParseResult], list[str]]:
-    """Parse every requested medicine/language; return results and missing keys."""
+    """Parse every requested medicine/language; return results and missing keys.
+
+    A checksum mismatch is not a missing document: it aborts the whole build instead
+    of being recorded in ``missing`` and silently skipped.
+    """
     results: list[ParseResult] = []
     missing: list[str] = []
     for medicine in medicines:
         for lang in (Lang.EN, Lang.EL):
             try:
                 result = parse_with_cache(
-                    settings, medicine, lang, budget=budget, reuse_cache=reuse_cache
+                    settings,
+                    medicine,
+                    lang,
+                    budget=budget,
+                    reuse_cache=reuse_cache,
+                    allow_checksum_mismatch=allow_checksum_mismatch,
                 )
+            except ChecksumMismatchError:
+                raise
             except IndexBuildError:
                 missing.append(f"{medicine.slug}:{lang.value}")
                 progress(f"MISSING {medicine.slug} {lang.value}: no source PDF")
@@ -354,6 +385,7 @@ def build_index(
     recreate: bool = True,
     reuse_cache: bool = True,
     allow_missing: bool = False,
+    allow_checksum_mismatch: bool = False,
     progress: Callable[[str], None] = print,
 ) -> IndexManifest:
     """Parse the corpus, embed every chunk and upsert it into Qdrant.
@@ -384,7 +416,12 @@ def build_index(
     budget = chunk_budget_for(encoder, settings)
     progress(f"chunk budget: {budget.label}, {budget.max_tokens} tokens ({budget.limit} usable)")
     results, missing = parse_corpus(
-        settings, selected, budget=budget, reuse_cache=reuse_cache, progress=progress
+        settings,
+        selected,
+        budget=budget,
+        reuse_cache=reuse_cache,
+        allow_checksum_mismatch=allow_checksum_mismatch,
+        progress=progress,
     )
     if missing and not allow_missing:
         msg = (

@@ -177,7 +177,7 @@ cleared. `data/medicines.yaml` carries the EMA attribution header; the README mu
 5. **Scope.** Only download/parse/coverage/tables tooling was touched. No search, embeddings,
    API, or deployment work. Pre-existing whole-repo lint/type issues elsewhere were not
    refactored; changed files are ruff-clean, `mypy --strict` was not run.
-6. **Duplicate manifest model.** `src/medleaf/corpus.py` is an unused second manifest model
-   (`sources`/`ema_url`) distinct from the live `models.py` + `ingest/store.py`
-   (`documents`/`epar_url`). Left untouched to keep the blast radius minimal; flagged for a
-   later cleanup.
+6. **Duplicate manifest model (resolved).** `src/medleaf/corpus.py` was an unused second
+   manifest model (`sources`/`ema_url`) distinct from the live `models.py` +
+   `ingest/store.py` (`documents`/`epar_url`). Removed in the public-repo cleanup; the
+   live models are the only manifest definition.

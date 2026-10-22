@@ -56,15 +56,6 @@ def upsert_medicine(medicines: list[Medicine], medicine: Medicine) -> list[Medic
     return medicines
 
 
-def with_checksums(medicine: Medicine, checksums: dict[Lang, str]) -> Medicine:
-    """Return a copy of ``medicine`` with pinned checksums and no other change."""
-    documents = {
-        lang: document.model_copy(update={"sha256": checksums.get(lang, document.sha256)})
-        for lang, document in medicine.documents.items()
-    }
-    return medicine.model_copy(update={"documents": documents})
-
-
 def slugify(name: str) -> str:
     """Turn an EMA brand name into a stable file-friendly slug."""
     cleaned = name.lower()
@@ -83,5 +74,4 @@ __all__ = [
     "load_medicines",
     "slugify",
     "upsert_medicine",
-    "with_checksums",
 ]

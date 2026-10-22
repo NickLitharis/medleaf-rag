@@ -272,6 +272,13 @@ def _cmd_download(args: argparse.Namespace, settings: Settings) -> int:
 def _cmd_check(args: argparse.Namespace, settings: Settings) -> int:
     """Parse the downloaded corpus and report section coverage per medicine and language."""
     medicines = load_medicines(settings.medicines_file)
+    if not medicines:
+        print(
+            f"no medicines in {settings.medicines_file}; "
+            "run `medleaf resolve` or `medleaf download` first",
+            file=sys.stderr,
+        )
+        return 1
     rows: list[CoverageRow] = []
     for medicine in medicines:
         if args.only and medicine.slug not in args.only:
@@ -306,6 +313,13 @@ def _cmd_check(args: argparse.Namespace, settings: Settings) -> int:
             )
 
     width = max((len(row.medicine) for row in rows), default=8)
+    if not rows:
+        print(
+            "no medicine-language rows to check; check the --only slugs against "
+            f"{settings.medicines_file}",
+            file=sys.stderr,
+        )
+        return 1
     for row in rows:
         flag = "ok  " if row.ok else "FAIL"
         detail = ""

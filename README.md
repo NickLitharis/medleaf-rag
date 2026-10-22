@@ -16,6 +16,9 @@ OpenAI-compatible LLM API · Docker Compose · GitHub Actions
   <img src="docs/demo-el.jpg" alt="Greek question about Ozempic side effects answered with quoted, cited EMA excerpts" width="49%">
 </p>
 
+Demo screenshots quote EMA product information. Both images carry the source line:
+*Source: European Medicines Agency (EMA) - ema.europa.eu*.
+
 ## How it works
 
 ```mermaid

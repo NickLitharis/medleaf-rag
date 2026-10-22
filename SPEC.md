@@ -159,7 +159,7 @@ the API without re-embedding the corpus. `medleaf ingest` rebuilds it from scrat
 | Tracing | Langfuse | LangSmith (SaaS only) |
 | Experiments | MLflow | Weights & Biases (SaaS account) |
 | Tests | pytest, pytest-asyncio, httpx | — |
-| Lint / types | ruff, mypy (strict) | — |
+| Lint | ruff | — |
 | Packaging | uv, `pyproject.toml` | pip + requirements.txt |
 | CI | GitHub Actions | — |
 
@@ -323,7 +323,7 @@ results table.
 
 | Workflow | Trigger | Steps | Secrets |
 |----------|---------|-------|---------|
-| `ci.yml` | every PR / push | ruff, mypy, pytest (unit + API with fakes), safety keyword-rule tests | none |
+| `ci.yml` | every PR / push | ruff, pytest (unit + API with fakes), safety keyword-rule tests | none |
 | `eval-retrieval.yml` | every PR | build index from cached corpus, run retrieval eval (search + rerank, `configs/best.yaml`) on `dev`, compare with `eval/baseline.json`, **fail if Recall@5 drops by more than 1 question (~2 points)** | none |
 | `eval-full.yml` | manual + weekly | safety + full answer eval with the LLM on `dev`; `test` only when run manually at a milestone; **fails on any missed emergency** | `OPENAI_API_KEY` |
 

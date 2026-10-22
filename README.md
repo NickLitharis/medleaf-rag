@@ -274,5 +274,6 @@ Do not use answers for treatment decisions. Read the linked EMA source.
 The code is released under the [MIT License](LICENSE). The medicine-information PDFs
 and the text extracted from them are **copyright of the European Medicines Agency
 (EMA)** and are not covered by the code licence; every copy must acknowledge EMA as
-the source. The recorded EMA legal terms are in `docs/M1-acceptance.md`. This
-repository claims no legal or clinical clearance.
+the source. See [NOTICE.md](NOTICE.md) for the attribution notice. The recorded EMA
+legal terms are in `docs/M1-acceptance.md`. This repository claims no legal or
+clinical clearance.

@@ -393,6 +393,12 @@ def build_index(
             + "; download them (`medleaf download`) or pass allow_missing=True"
         )
         raise IndexBuildError(msg)
+    if not results:
+        msg = (
+            "the parse produced no documents; refusing to replace the served index "
+            "with an empty collection"
+        )
+        raise IndexBuildError(msg)
 
     corpus_version = resolved_corpus_version(settings)
     dimension = encoder.dimension
@@ -423,6 +429,12 @@ def build_index(
             replace=bool(only) and not recreate,
             progress=progress,
         )
+        if sum(chunk_counts.values()) == 0:
+            msg = (
+                "the build produced zero chunks; refusing to replace the served index "
+                "with an empty collection"
+            )
+            raise IndexBuildError(msg)
         if recreate:
             previous = point_alias(client, alias=served, collection=target)
             progress(f"alias {served!r} -> {target!r}")

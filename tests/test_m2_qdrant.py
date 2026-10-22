@@ -43,7 +43,7 @@ from medleaf.retrieval.index import (
     upsert_sections,
     write_manifest,
 )
-from medleaf.retrieval.pipeline import ParseResult, build_index
+from medleaf.retrieval.pipeline import IndexBuildError, ParseResult, build_index
 from medleaf.retrieval.service import RetrievalService
 from medleaf.retrieval.text import sparse_vector, token_id, tokenize
 
@@ -808,6 +808,48 @@ def test_failed_build_keeps_serving_the_old_index(
             if c.name.startswith(f"{collection}_") and c.name != served
         ]
         assert leftovers == []
+    finally:
+        _drop_build_collections(qdrant, collection)
+
+
+@pytest.mark.parametrize(
+    "empty_parse",
+    [False, True],
+    ids=["zero-chunks", "no-parse-results"],
+)
+def test_empty_build_cannot_replace_the_served_index(
+    qdrant: QdrantClient,
+    collection: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_parse: bool,
+) -> None:
+    """``--allow-missing`` with no usable PDFs must not swap the alias to an empty index."""
+    settings = Settings(data_dir=tmp_path, qdrant_collection=collection)
+    encoder = HashTestEncoder()
+    try:
+        _fake_corpus(monkeypatch, settings, _eliquis_sections(3))
+        build_index(settings=settings, client=qdrant, encoder=encoder, progress=lambda _l: None)
+        served = alias_target(qdrant, collection)
+        assert served is not None
+
+        _fake_corpus(monkeypatch, settings, [])
+        if empty_parse:
+            monkeypatch.setattr(
+                pipeline, "parse_corpus", lambda *_args, **_kwargs: ([], ["eliquis:en"])
+            )
+        with pytest.raises(IndexBuildError, match="refusing to replace"):
+            build_index(
+                settings=settings,
+                client=qdrant,
+                encoder=encoder,
+                allow_missing=True,
+                progress=lambda _l: None,
+            )
+
+        assert alias_target(qdrant, collection) == served, "the served alias must not move"
+        assert qdrant.collection_exists(served)
+        assert collection_count(qdrant, collection=collection) == 3
     finally:
         _drop_build_collections(qdrant, collection)
 

@@ -123,7 +123,7 @@ Python 3.11 or later. The retrieval stack (torch, sentence-transformers, Qdrant
 client, FastAPI) is an extra, so a plain checkout stays light:
 
 ```bash
-python -m pip install -e ".[dev]"            # lint, type checks and the fast tests
+python -m pip install -e ".[dev]"            # lint and the fast tests
 python -m pip install -e ".[api,retrieval]"  # index build + API
 python -m pytest -q                          # fast tests, in-memory Qdrant
 python -m ruff check .

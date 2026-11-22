@@ -1,0 +1,2839 @@
+{
+  "experiment": "Native Rust table detection and flattening versus MedLeaf's Python production table extraction",
+  "attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+  "status": "PASS",
+  "manifest_sha256": "281ac3a82c9d4cfa6ec44165ba5bce581d0151f8b0b55fdd52c94854065d9106",
+  "sample_slugs": [
+    "xarelto",
+    "eliquis",
+    "humira"
+  ],
+  "languages": [
+    "en",
+    "el"
+  ],
+  "reproduction_command": "/tmp/medleaf-pdf-venv/bin/python experiments/rust-pdf/run_native_tables.py",
+  "acceptance_thresholds": {
+    "table_detection": {
+      "precision_min": 0.9,
+      "recall_min": 0.9,
+      "matching": "one-to-one same-page table bbox IoU >= 0.25"
+    },
+    "cell_content": {
+      "precision_min": 0.95,
+      "recall_min": 0.95,
+      "comparison": "NFKC+casefold alphanumeric character multiset over all nonempty table cells"
+    },
+    "frequency_association": {
+      "precision_min": 0.95,
+      "recall_min": 0.95,
+      "comparison": "production frequency-row predicate and reaction-cell multiset + normalized frequency label association key"
+    },
+    "column_frequency_association": {
+      "precision_min": 0.95,
+      "recall_min": 0.95,
+      "assignment_mismatches_allowed": 0,
+      "applicability": "gate applies when a reference table has a supported grid (frequency labels in header columns) or labelled layout (frequency labels in header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise per-document applicability is reported as false.",
+      "key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+    },
+    "exact_normalized_row_recall": "reported as a diagnostic only; not a pass gate",
+    "existing_xarelto_en_oracle": "all eight independent assertions must pass"
+  },
+  "comparison_schema": {
+    "candidate": "Rust JSON pages[*].tables[*].{bbox_pt,rows[*].cells[*],lines}; cell text/bold/bboxes and flattened lines are read directly from Rust output.",
+    "reference_table_detection": "PyMuPDF page.find_tables() on pages owned by first-copy SmPC 4.8.",
+    "reference_cells": "PyMuPDF Table.extract() and its row/cell order; page-span bold flags use the existing production _cell_bold_flags helper.",
+    "reference_flattening": "The existing Python production flatten_table_rows() is applied to reference PyMuPDF cells only. It is never called with native candidate cells.",
+    "native_flattening": "Native candidate flattened lines are exactly Rust table.lines; Python does not rebuild them from Rust cells.",
+    "table_identity": "One-to-one greedy matching of candidate/reference bbox IoU on the same page; reference geometry is comparison-only and does not construct candidate rows.",
+    "row_identity": "NFKC+casefold, whitespace-collapsed exact line multiset; reported as a diagnostic.",
+    "frequency_identity": "Existing production is_readable_frequency_row and frequency_association_key, which preserve reaction/frequency association while ignoring punctuation and reaction character order.",
+    "column_frequency_identity": "Reaction text, indication/frequency column index, and frequency label are compared as a multiset on matched tables; reference-supported unmapped tables count as missed, and unsupported reference layouts are explicitly not applicable."
+  },
+  "selection": {
+    "python_reference": "The existing Python production extract_lines/split_sections/first_copy_headings/_table_owner_pages implementation selects first-copy SmPC 4.8 owner pages. This is explicitly the reference selection, not a Rust page-selection result.",
+    "native_candidates": "Only native tables on those Python-selected 4.8 pages are scored; native tables outside them are counted separately."
+  },
+  "explicit_limits": [
+    "The Python production parser selects section 4.8 pages and its first copy; this experiment does not measure native section-heading or repeated-copy selection.",
+    "PyMuPDF TableFinder and production row flattening are the comparison oracle, not an independently adjudicated medical ground truth.",
+    "Cell character multiset metrics ignore character order and punctuation. Exact normalized row recall, table bbox matches, reviewed source cases, and Xarelto SOC checks are diagnostics; reaction+column+frequency precision and recall are gated when the reference layout supports that mapping.",
+    "Bbox IoU measures table detection agreement, not semantic equivalence; different but useful table boundaries can reduce detection scores.",
+    "The reviewed bilingual oracles cover selected Eliquis Table 3 rows, not every adverse reaction, indication column, or all table layouts in the six PDFs."
+  ],
+  "tools": {
+    "python": "3.13.5",
+    "pymupdf": "1.28.2",
+    "pydantic": "2.14.4",
+    "pyyaml": "6.0.4",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+    "uv": "uv 0.10.9",
+    "pdfium_release": "158.0.8125.0",
+    "pdfium_render_crate": "0.9.6",
+    "python_executable": "/tmp/medleaf-pdf-venv/bin/python",
+    "pdfium_library_path": "/tmp/medleaf-pdf-assets/pdfium-8125/libpdfium.so",
+    "pdfium_library_sha256": "1c251efce460d67437a4c76d4be9033ae2f17bf5603f5bff1af10209b94ca723",
+    "pdfium_library_expected_sha256": "1c251efce460d67437a4c76d4be9033ae2f17bf5603f5bff1af10209b94ca723",
+    "pdfium_archive_url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-linux-x64.tgz",
+    "pdfium_archive_expected_sha256": "e1c3ce6e270cb5e0c20816b379ad9f2c1309972697c505f508de92bf5e7d6659",
+    "pdfium_archive_sha256": "e1c3ce6e270cb5e0c20816b379ad9f2c1309972697c505f508de92bf5e7d6659",
+    "cargo_build_command": [
+      "/home/marocos/.cargo/bin/cargo",
+      "build",
+      "--release",
+      "--locked",
+      "--manifest-path",
+      "/home/marocos/projects/medleaf-rag/experiments/rust-pdf/Cargo.toml"
+    ],
+    "probe_binary_sha256": "ce5f4425f543312d9305c9c178fe8923126d007f3ae8fb87ee20c83ec2b41769",
+    "native_cases_sha256": "3fa633e2f7fba9fe455f84ef01be843c95b090cd034fb2508acfdefa013c090f",
+    "native_evaluator_sha256": "26b724a8a2364591d7c071b4624cd11fbd0f76c950723b3574e27c69ec20481d",
+    "application_package": {
+      "name": "medleaf-ema-pdfium-probe",
+      "version": "0.1.0",
+      "edition": "2024"
+    },
+    "direct_dependency_lock_entries": {
+      "pdfium-render": {
+        "version": "0.9.6",
+        "registry_checksum": "ea2a078e29ca04924cfd9f5c718b9175d6dbe54ef0959322ae2055dcdb83f5cf"
+      },
+      "serde": {
+        "version": "1.0.229",
+        "registry_checksum": "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
+      },
+      "serde_json": {
+        "version": "1.0.154",
+        "registry_checksum": "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
+      }
+    },
+    "cargo_toml_sha256": "3721ebf0586639d941c55bf58e21f7d36b9c21ff60d4009329ac6394cf15650d",
+    "cargo_lock_sha256": "bcc0085d62f2a3120f5f27fd37e3a39278e02215817ef3f2c66633738e603abe"
+  },
+  "pdf_hashes": [
+    {
+      "medicine": "xarelto",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/xarelto-epar-product-information_en.pdf",
+      "manifest_pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+      "path": "/tmp/medleaf-pdf-assets/xarelto_en.pdf",
+      "actual_pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+      "verified": true
+    },
+    {
+      "medicine": "xarelto",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/xarelto-epar-product-information_el.pdf",
+      "manifest_pdf_sha256": "ae1220c9504ca1809ff2f8b66b7786ec35601a04660912bb3cfd292bf636d8ef",
+      "path": "/tmp/medleaf-pdf-assets/xarelto_el.pdf",
+      "actual_pdf_sha256": "ae1220c9504ca1809ff2f8b66b7786ec35601a04660912bb3cfd292bf636d8ef",
+      "verified": true
+    },
+    {
+      "medicine": "eliquis",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/eliquis-epar-product-information_en.pdf",
+      "manifest_pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+      "path": "/tmp/medleaf-pdf-assets/eliquis_en.pdf",
+      "actual_pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+      "verified": true
+    },
+    {
+      "medicine": "eliquis",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/eliquis-epar-product-information_el.pdf",
+      "manifest_pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+      "path": "/tmp/medleaf-pdf-assets/eliquis_el.pdf",
+      "actual_pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+      "verified": true
+    },
+    {
+      "medicine": "humira",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/humira-epar-product-information_en.pdf",
+      "manifest_pdf_sha256": "0118f9ea31f7b28ac156bc8449293407c25bc43421a73fa92a30fe90db390eca",
+      "path": "/tmp/medleaf-pdf-assets/humira_en.pdf",
+      "actual_pdf_sha256": "0118f9ea31f7b28ac156bc8449293407c25bc43421a73fa92a30fe90db390eca",
+      "verified": true
+    },
+    {
+      "medicine": "humira",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/humira-epar-product-information_el.pdf",
+      "manifest_pdf_sha256": "461e0a3562dc733639f0225aed4ca54b5a0f6dc422eceeaa98d90a4521d97687",
+      "path": "/tmp/medleaf-pdf-assets/humira_el.pdf",
+      "actual_pdf_sha256": "461e0a3562dc733639f0225aed4ca54b5a0f6dc422eceeaa98d90a4521d97687",
+      "verified": true
+    }
+  ],
+  "negative_controls": {
+    "source": "In-memory copies of pinned Xarelto EN and Eliquis EN 4.8 PyMuPDF reference tables; controls are not native-parser results and no corpus files are changed.",
+    "baseline_reference_copy_passes_all_gates": true,
+    "swapped_frequency_control": {
+      "source_rows": [
+        "Anaemia (incl. respective laboratory parameters) - Common",
+        "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+      ],
+      "mutated_rows": [
+        "Anaemia (incl. respective laboratory parameters) - Uncommon",
+        "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Common"
+      ],
+      "frequency_metrics": {
+        "reference_associations": 31,
+        "native_associations": 31,
+        "matched_associations": 29,
+        "precision": 0.9354838709677419,
+        "recall": 0.9354838709677419,
+        "missing_reference_rows": [
+          "Anaemia (incl. respective laboratory parameters) - Common",
+          "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+        ],
+        "unexpected_native_rows": [
+          "Anaemia (incl. respective laboratory parameters) - Uncommon",
+          "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Common"
+        ],
+        "missing_association_count": 2,
+        "unexpected_association_count": 2,
+        "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+      },
+      "baseline_frequency_gate_passes": true,
+      "swapped_frequency_gate_passes": false,
+      "rejected_as_required": true,
+      "setup_error": null
+    },
+    "missing_tables_control": {
+      "candidate_tables_after_mutation": 0,
+      "acceptance_criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": false,
+        "native_table_detection_recall_at_least_0_90": false,
+        "cell_content_precision_at_least_0_95": false,
+        "cell_content_recall_at_least_0_95": false,
+        "frequency_association_precision_at_least_0_95": false,
+        "frequency_association_recall_at_least_0_95": false,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": false,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": false,
+        "no_reaction_column_frequency_assignment_mismatches": false
+      },
+      "rejected_as_required": true
+    },
+    "empty_tables_control": {
+      "candidate_table_count": 5,
+      "candidate_rows_after_mutation": 0,
+      "candidate_lines_after_mutation": 0,
+      "acceptance_criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": false,
+        "cell_content_recall_at_least_0_95": false,
+        "frequency_association_precision_at_least_0_95": false,
+        "frequency_association_recall_at_least_0_95": false,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": false,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": false,
+        "no_reaction_column_frequency_assignment_mismatches": false
+      },
+      "rejected_as_required": true
+    },
+    "indication_column_frequency_swap_control": {
+      "source": "In-memory copy of the pinned Eliquis EN 4.8 PyMuPDF reference table; only cell-column assignments change, no corpus files are modified.",
+      "case_id": "eliquis-en-table-3-frequency-columns",
+      "source_table": "Table 3: Tabulated adverse reactions; rows Anaemia and Thrombocytopenia in the pinned SmPC",
+      "table_format": "labelled",
+      "reference_page": 15,
+      "reference_table_index": 0,
+      "reaction": "Thrombocytopenia",
+      "swapped_indication_columns": [
+        {
+          "column_1_based": 2,
+          "header": "Prevention of\nVTE in adult\npatients who\nhave\nundergone\nelective hip or\nknee\nreplacement\nsurgery\n(VTEp)",
+          "frequency_before": "uncommon",
+          "frequency_after": "common"
+        },
+        {
+          "column_1_based": 4,
+          "header": "Treatment of\nDVT and PE,\nand\nprevention of\nrecurrent\nDVT and PE\n(VTEt) in\nadult patients",
+          "frequency_before": "common",
+          "frequency_after": "uncommon"
+        }
+      ],
+      "per_reaction_frequency_multiset_preserved": true,
+      "row_level_frequency_lines_held_unchanged": true,
+      "baseline_column_metrics": {
+        "reference_mapping_applicable": true,
+        "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+        "reference_table_formats": {
+          "labelled": 3
+        },
+        "native_table_formats": {
+          "labelled": 3
+        },
+        "applicable_reference_tables": 3,
+        "unmatched_applicable_reference_tables": 0,
+        "reference_associations": 144,
+        "native_associations": 144,
+        "matched_associations": 144,
+        "precision": 1.0,
+        "recall": 1.0,
+        "matched_tables_used": 3,
+        "column_count_mismatch_count": 0,
+        "column_count_mismatches": [],
+        "table_format_mismatch_count": 0,
+        "table_format_mismatches": [],
+        "missing_reference_column_frequency_associations": 0,
+        "unexpected_native_column_frequency_associations": 0,
+        "missing_examples": [],
+        "unexpected_examples": [],
+        "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+      },
+      "mutated_column_metrics": {
+        "reference_mapping_applicable": true,
+        "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+        "reference_table_formats": {
+          "labelled": 3
+        },
+        "native_table_formats": {
+          "labelled": 3
+        },
+        "applicable_reference_tables": 3,
+        "unmatched_applicable_reference_tables": 0,
+        "reference_associations": 144,
+        "native_associations": 144,
+        "matched_associations": 142,
+        "precision": 0.9861111111111112,
+        "recall": 0.9861111111111112,
+        "matched_tables_used": 3,
+        "column_count_mismatch_count": 0,
+        "column_count_mismatches": [],
+        "table_format_mismatch_count": 0,
+        "table_format_mismatches": [],
+        "missing_reference_column_frequency_associations": 2,
+        "unexpected_native_column_frequency_associations": 2,
+        "missing_examples": [
+          "row 4, column 2: Thrombocytopenia -> uncommon",
+          "row 4, column 4: Thrombocytopenia -> common"
+        ],
+        "unexpected_examples": [
+          "row 4, column 2: Thrombocytopenia -> common",
+          "row 4, column 4: Thrombocytopenia -> uncommon"
+        ],
+        "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+      },
+      "baseline_column_gate_passes": true,
+      "mutated_column_gate_passes": false,
+      "row_frequency_metrics_unchanged": true,
+      "mutated_acceptance_criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": false
+      },
+      "mutated_failed_criteria": [
+        "no_reaction_column_frequency_assignment_mismatches"
+      ],
+      "rejected_as_required": true,
+      "pass": true
+    },
+    "multiline_frequency_label_regression_controls": {
+      "cases": [
+        {
+          "text": "Very\ncommon",
+          "expected": [
+            "very common"
+          ],
+          "actual": [
+            "very common"
+          ]
+        },
+        {
+          "text": "Όχι\nσυχνές",
+          "expected": [
+            "όχι συχνέσ"
+          ],
+          "actual": [
+            "όχι συχνέσ"
+          ]
+        },
+        {
+          "text": "Πολύ\nσυχνές",
+          "expected": [
+            "πολύ συχνέσ"
+          ],
+          "actual": [
+            "πολύ συχνέσ"
+          ]
+        },
+        {
+          "text": "Μη γνωστής\nσυχνότητας",
+          "expected": [
+            "μη γνωστήσ συχνότητασ"
+          ],
+          "actual": [
+            "μη γνωστήσ συχνότητασ"
+          ]
+        }
+      ],
+      "pass": true
+    },
+    "pass": true
+  },
+  "summary": {
+    "documents_requested": 6,
+    "documents_analyzed": 6,
+    "documents_passed": 6,
+    "pymupdf_pages": 1672,
+    "native_pages": 1672,
+    "first_copy_smpc_4_8_pages": 44,
+    "reference_tables": 30,
+    "native_tables": 30,
+    "reference_rows": 352,
+    "native_rows": 352,
+    "reviewed_source_table_oracles_pass": true,
+    "xarelto_en_independent_check_count": 8,
+    "xarelto_en_independent_oracle_pass": true,
+    "negative_controls_pass": true,
+    "status": "PASS"
+  },
+  "documents": [
+    {
+      "medicine": "xarelto",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/xarelto-epar-product-information_en.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+      "pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+      "page_count_pymupdf": 312,
+      "page_count_native": 312,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. NAME OF THE MEDICINAL PRODUCT"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. QUALITATIVE AND QUANTITATIVE COMPOSITION"
+          },
+          {
+            "line_index": 10,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. PHARMACEUTICAL FORM"
+          },
+          {
+            "line_index": 14,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. CLINICAL PARTICULARS"
+          },
+          {
+            "line_index": 15,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Therapeutic indications"
+          },
+          {
+            "line_index": 22,
+            "page": 2,
+            "section_key": "4.2",
+            "text": "4.2 Posology and method of administration"
+          },
+          {
+            "line_index": 107,
+            "page": 4,
+            "section_key": "4.3",
+            "text": "4.3 Contraindications"
+          },
+          {
+            "line_index": 128,
+            "page": 5,
+            "section_key": "4.4",
+            "text": "4.4 Special warnings and precautions for use"
+          },
+          {
+            "line_index": 278,
+            "page": 8,
+            "section_key": "4.5",
+            "text": "4.5 Interaction with other medicinal products and other forms of interaction"
+          },
+          {
+            "line_index": 362,
+            "page": 9,
+            "section_key": "4.6",
+            "text": "4.6 Fertility, pregnancy and lactation"
+          },
+          {
+            "line_index": 378,
+            "page": 10,
+            "section_key": "4.7",
+            "text": "4.7 Effects on ability to drive and use machines"
+          },
+          {
+            "line_index": 382,
+            "page": 10,
+            "section_key": "4.8",
+            "text": "4.8 Undesirable effects"
+          },
+          {
+            "line_index": 607,
+            "page": 14,
+            "section_key": "4.9",
+            "text": "4.9 Overdose"
+          },
+          {
+            "line_index": 639,
+            "page": 15,
+            "section_key": "5",
+            "text": "5. PHARMACOLOGICAL PROPERTIES"
+          },
+          {
+            "line_index": 640,
+            "page": 15,
+            "section_key": "5.1",
+            "text": "5.1 Pharmacodynamic properties"
+          },
+          {
+            "line_index": 1035,
+            "page": 24,
+            "section_key": "5.2",
+            "text": "5.2 Pharmacokinetic properties"
+          },
+          {
+            "line_index": 1140,
+            "page": 26,
+            "section_key": "5.3",
+            "text": "5.3 Preclinical safety data"
+          },
+          {
+            "line_index": 1153,
+            "page": 26,
+            "section_key": "6",
+            "text": "6. PHARMACEUTICAL PARTICULARS"
+          },
+          {
+            "line_index": 1154,
+            "page": 26,
+            "section_key": "6.1",
+            "text": "6.1 List of excipients"
+          },
+          {
+            "line_index": 1168,
+            "page": 27,
+            "section_key": "6.2",
+            "text": "6.2 Incompatibilities"
+          },
+          {
+            "line_index": 1170,
+            "page": 27,
+            "section_key": "6.3",
+            "text": "6.3 Shelf life"
+          },
+          {
+            "line_index": 1174,
+            "page": 27,
+            "section_key": "6.4",
+            "text": "6.4 Special precautions for storage"
+          },
+          {
+            "line_index": 1176,
+            "page": 27,
+            "section_key": "6.5",
+            "text": "6.5 Nature and contents of container"
+          },
+          {
+            "line_index": 1184,
+            "page": 27,
+            "section_key": "6.6",
+            "text": "6.6 Special precautions for disposal and other handling"
+          },
+          {
+            "line_index": 1194,
+            "page": 27,
+            "section_key": "7",
+            "text": "7. MARKETING AUTHORISATION HOLDER"
+          },
+          {
+            "line_index": 1198,
+            "page": 27,
+            "section_key": "8",
+            "text": "8. MARKETING AUTHORISATION NUMBER(S)"
+          },
+          {
+            "line_index": 1200,
+            "page": 27,
+            "section_key": "9",
+            "text": "9. DATE OF FIRST AUTHORISATION/RENEWAL OF THE AUTHORISATION"
+          },
+          {
+            "line_index": 1204,
+            "page": 28,
+            "section_key": "10",
+            "text": "10. DATE OF REVISION OF THE TEXT"
+          }
+        ],
+        "first_copy_end_line_index": 1208,
+        "owned_pages_4_8": [
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "excluded_native_tables_outside_owned_pages": 573
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 573,
+      "comparison": {
+        "reference_tables": 5,
+        "native_tables": 5,
+        "matched_tables": 5,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 11,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999949
+          },
+          {
+            "page": 12,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999825
+          },
+          {
+            "page": 13,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999786
+          },
+          {
+            "page": 10,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999663
+          },
+          {
+            "page": 11,
+            "reference_table_index": 1,
+            "native_table_index": 1,
+            "bbox_iou": 0.999488
+          }
+        ],
+        "reference_rows": 51,
+        "native_rows": 51,
+        "reference_nonempty_cells": 121,
+        "native_nonempty_cells": 121,
+        "reference_cell_alphanumeric_characters": 3872,
+        "native_cell_alphanumeric_characters": 3872,
+        "matched_cell_alphanumeric_characters": 3872,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 62,
+        "native_rust_flattened_lines": 62,
+        "exact_normalized_row_matches": 58,
+        "exact_normalized_row_recall": 0.9354838709677419,
+        "exact_normalized_row_precision": 0.9354838709677419,
+        "frequency_association": {
+          "reference_associations": 31,
+          "native_associations": 31,
+          "matched_associations": 31,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "grid": 2
+          },
+          "native_table_formats": {
+            "grid": 2
+          },
+          "applicable_reference_tables": 2,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 31,
+          "native_associations": 31,
+          "matched_associations": 31,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 5,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true,
+        "reviewed_source_table_oracle_pass": true,
+        "existing_xarelto_en_eight_checks_pass": true
+      },
+      "oracle_case": {
+        "source_pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+        "case_definition": "Tabulated list of adverse reactions; pinned source table and tests/test_m1_acceptance.py:208-264",
+        "reference": {
+          "id": "xarelto-en-independent-frequency-and-soc-oracle",
+          "source_table": "Tabulated list of adverse reactions; pinned source table and tests/test_m1_acceptance.py:208-264",
+          "review_note": null,
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Anaemia",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Anaemia (incl. respective laboratory parameters) - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Thrombocytosis",
+                "frequency_labels": {
+                  "Uncommon": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Eye haemorrhage",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Eye haemorrhage (incl. conjunctival haemorrhage) - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Hypotension",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Hypotension, haematoma - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "not_glued_pair": [
+                  "Anaemia",
+                  "Thrombocytosis"
+                ]
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Eye disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Nervous system disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Vascular disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            }
+          ],
+          "pass": true
+        },
+        "native": {
+          "id": "xarelto-en-independent-frequency-and-soc-oracle",
+          "source_table": "Tabulated list of adverse reactions; pinned source table and tests/test_m1_acceptance.py:208-264",
+          "review_note": null,
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Anaemia",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Anaemia (incl. respective laboratory parameters) - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Thrombocytosis",
+                "frequency_labels": {
+                  "Uncommon": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Eye haemorrhage",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Eye haemorrhage (incl. conjunctival haemorrhage) - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Hypotension",
+                "frequency_labels": {
+                  "Common": 1
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Hypotension, haematoma - Common"
+              ]
+            },
+            {
+              "expectation": {
+                "not_glued_pair": [
+                  "Anaemia",
+                  "Thrombocytosis"
+                ]
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Eye disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Nervous system disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            },
+            {
+              "expectation": {
+                "unbanded_soc_heading": "Vascular disorders"
+              },
+              "pass": true,
+              "violating_lines": []
+            }
+          ],
+          "pass": true
+        },
+        "pass": true
+      },
+      "xarelto_independent_4_8_oracle": {
+        "oracle_source": "tests/test_m1_acceptance.py:208-264 (the existing eight independent Xarelto EN assertions)",
+        "reference": {
+          "oracle_source": "tests/test_m1_acceptance.py:208-264 (independent real-PDF acceptance assertions)",
+          "checks": {
+            "Anaemia -> Common": true,
+            "Thrombocytosis -> Uncommon": true,
+            "Eye haemorrhage -> Common": true,
+            "Hypotension -> Common": true,
+            "Anaemia not glued to Thrombocytosis": true,
+            "SOC Eye disorders stays unbanded": true,
+            "SOC Nervous system disorders stays unbanded": true,
+            "SOC Vascular disorders stays unbanded": true
+          },
+          "pass": true,
+          "matched_rows": {
+            "Anaemia": [
+              "Anaemia (incl. respective laboratory parameters) - Common"
+            ],
+            "Thrombocytosis": [
+              "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+            ],
+            "Eye haemorrhage": [
+              "Eye haemorrhage (incl. conjunctival haemorrhage) - Common"
+            ],
+            "Hypotension": [
+              "Hypotension, haematoma - Common"
+            ]
+          },
+          "attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA."
+        },
+        "native": {
+          "oracle_source": "tests/test_m1_acceptance.py:208-264 (independent real-PDF acceptance assertions)",
+          "checks": {
+            "Anaemia -> Common": true,
+            "Thrombocytosis -> Uncommon": true,
+            "Eye haemorrhage -> Common": true,
+            "Hypotension -> Common": true,
+            "Anaemia not glued to Thrombocytosis": true,
+            "SOC Eye disorders stays unbanded": true,
+            "SOC Nervous system disorders stays unbanded": true,
+            "SOC Vascular disorders stays unbanded": true
+          },
+          "pass": true,
+          "matched_rows": {
+            "Anaemia": [
+              "Anaemia (incl. respective laboratory parameters) - Common"
+            ],
+            "Thrombocytosis": [
+              "Thrombocytosis (incl. platelet count increased)A, thrombocytopenia - Uncommon"
+            ],
+            "Eye haemorrhage": [
+              "Eye haemorrhage (incl. conjunctival haemorrhage) - Common"
+            ],
+            "Hypotension": [
+              "Hypotension, haematoma - Common"
+            ]
+          },
+          "attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA."
+        },
+        "independent_check_count": 8,
+        "false_positive_bold_soc_headings": {
+          "count": 0,
+          "lines": []
+        },
+        "pass": true
+      },
+      "acceptance_pass": true,
+      "status": "PASS"
+    },
+    {
+      "medicine": "xarelto",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/xarelto-epar-product-information_el.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "ae1220c9504ca1809ff2f8b66b7786ec35601a04660912bb3cfd292bf636d8ef",
+      "pdf_sha256": "ae1220c9504ca1809ff2f8b66b7786ec35601a04660912bb3cfd292bf636d8ef",
+      "page_count_pymupdf": 372,
+      "page_count_native": 372,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. ΟΝΟΜΑΣΙΑ ΤΟΥ ΦΑΡΜΑΚΕΥΤΙΚΟΥ ΠΡΟΪΟΝΤΟΣ"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. ΠΟΙΟΤΙΚΗ ΚΑΙ ΠΟΣΟΤΙΚΗ ΣΥΝΘΕΣΗ"
+          },
+          {
+            "line_index": 11,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. ΦΑΡΜΑΚΟΤΕΧΝΙΚΗ ΜΟΡΦΗ"
+          },
+          {
+            "line_index": 16,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. ΚΛΙΝΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 17,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Θεραπευτικές ενδείξεις"
+          },
+          {
+            "line_index": 25,
+            "page": 2,
+            "section_key": "4.2",
+            "text": "4.2 Δοσολογία και τρόπος χορήγησης"
+          },
+          {
+            "line_index": 130,
+            "page": 5,
+            "section_key": "4.3",
+            "text": "4.3 Αντενδείξεις"
+          },
+          {
+            "line_index": 156,
+            "page": 5,
+            "section_key": "4.4",
+            "text": "4.4 Ειδικές προειδοποιήσεις και προφυλάξεις κατά τη χρήση"
+          },
+          {
+            "line_index": 336,
+            "page": 9,
+            "section_key": "4.5",
+            "text": "4.5 Αλληλεπιδράσεις με άλλα φαρμακευτικά προϊόντα και άλλες μορφές αλληλεπίδρασης"
+          },
+          {
+            "line_index": 435,
+            "page": 11,
+            "section_key": "4.6",
+            "text": "4.6 Γονιμότητα, κύηση και γαλουχία"
+          },
+          {
+            "line_index": 453,
+            "page": 11,
+            "section_key": "4.7",
+            "text": "4.7 Επιδράσεις στην ικανότητα οδήγησης και χειρισμού μηχανημάτων"
+          },
+          {
+            "line_index": 458,
+            "page": 11,
+            "section_key": "4.8",
+            "text": "4.8 Ανεπιθύμητες ενέργειες"
+          },
+          {
+            "line_index": 739,
+            "page": 17,
+            "section_key": "4.9",
+            "text": "4.9 Υπερδοσολογία"
+          },
+          {
+            "line_index": 778,
+            "page": 18,
+            "section_key": "5",
+            "text": "5. ΦΑΡΜΑΚΟΛΟΓΙΚΕΣ ΙΔΙΟΤΗΤΕΣ"
+          },
+          {
+            "line_index": 779,
+            "page": 18,
+            "section_key": "5.1",
+            "text": "5.1 Φαρμακοδυναμικές ιδιότητες"
+          },
+          {
+            "line_index": 1307,
+            "page": 32,
+            "section_key": "5.2",
+            "text": "5.2 Φαρμακοκινητικές ιδιότητες"
+          },
+          {
+            "line_index": 1428,
+            "page": 34,
+            "section_key": "5.3",
+            "text": "5.3 Προκλινικά δεδομένα για την ασφάλεια"
+          },
+          {
+            "line_index": 1444,
+            "page": 34,
+            "section_key": "6",
+            "text": "6. ΦΑΡΜΑΚΕΥΤΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 1445,
+            "page": 34,
+            "section_key": "6.1",
+            "text": "6.1 Κατάλογος εκδόχων"
+          },
+          {
+            "line_index": 1459,
+            "page": 35,
+            "section_key": "6.2",
+            "text": "6.2 Ασυμβατότητες"
+          },
+          {
+            "line_index": 1461,
+            "page": 35,
+            "section_key": "6.3",
+            "text": "6.3 Διάρκεια ζωής"
+          },
+          {
+            "line_index": 1466,
+            "page": 35,
+            "section_key": "6.4",
+            "text": "6.4 Ιδιαίτερες προφυλάξεις κατά τη φύλαξη του προϊόντος"
+          },
+          {
+            "line_index": 1468,
+            "page": 35,
+            "section_key": "6.5",
+            "text": "6.5 Φύση και συστατικά του περιέκτη"
+          },
+          {
+            "line_index": 1478,
+            "page": 35,
+            "section_key": "6.6",
+            "text": "6.6 Ιδιαίτερες προφυλάξεις απόρριψης και άλλος χειρισμός"
+          },
+          {
+            "line_index": 1489,
+            "page": 35,
+            "section_key": "7",
+            "text": "7. ΚΑΤΟΧΟΣ ΤΗΣ ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1494,
+            "page": 36,
+            "section_key": "8",
+            "text": "8. ΑΡΙΘΜΟΣ(ΟΙ) ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1496,
+            "page": 36,
+            "section_key": "9",
+            "text": "9. ΗΜΕΡΟΜΗΝΙΑ ΠΡΩΤΗΣ ΕΓΚΡΙΣΗΣ/ΑΝΑΝΕΩΣΗΣ ΤΗΣ ΑΔΕΙΑΣ"
+          },
+          {
+            "line_index": 1499,
+            "page": 36,
+            "section_key": "10",
+            "text": "10. ΗΜΕΡΟΜΗΝΙΑ ΑΝΑΘΕΩΡΗΣΗΣ ΤΟΥ ΚΕΙΜΕΝΟΥ"
+          }
+        ],
+        "first_copy_end_line_index": 1503,
+        "owned_pages_4_8": [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "excluded_native_tables_outside_owned_pages": 447
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 447,
+      "comparison": {
+        "reference_tables": 5,
+        "native_tables": 5,
+        "matched_tables": 5,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 12,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999735
+          },
+          {
+            "page": 15,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999591
+          },
+          {
+            "page": 16,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999586
+          },
+          {
+            "page": 13,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999576
+          },
+          {
+            "page": 14,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999523
+          }
+        ],
+        "reference_rows": 51,
+        "native_rows": 51,
+        "reference_nonempty_cells": 122,
+        "native_nonempty_cells": 122,
+        "reference_cell_alphanumeric_characters": 4361,
+        "native_cell_alphanumeric_characters": 4361,
+        "matched_cell_alphanumeric_characters": 4361,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 62,
+        "native_rust_flattened_lines": 62,
+        "exact_normalized_row_matches": 60,
+        "exact_normalized_row_recall": 0.967741935483871,
+        "exact_normalized_row_precision": 0.967741935483871,
+        "frequency_association": {
+          "reference_associations": 31,
+          "native_associations": 31,
+          "matched_associations": 31,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "grid": 3
+          },
+          "native_table_formats": {
+            "grid": 3
+          },
+          "applicable_reference_tables": 3,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 31,
+          "native_associations": 31,
+          "matched_associations": 31,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 5,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true
+      },
+      "oracle_case": null,
+      "xarelto_independent_4_8_oracle": null,
+      "acceptance_pass": true,
+      "status": "PASS"
+    },
+    {
+      "medicine": "eliquis",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/eliquis-epar-product-information_en.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+      "pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+      "page_count_pymupdf": 185,
+      "page_count_native": 185,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. NAME OF THE MEDICINAL PRODUCT"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. QUALITATIVE AND QUANTITATIVE COMPOSITION"
+          },
+          {
+            "line_index": 10,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. PHARMACEUTICAL FORM"
+          },
+          {
+            "line_index": 13,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. CLINICAL PARTICULARS"
+          },
+          {
+            "line_index": 14,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Therapeutic indications"
+          },
+          {
+            "line_index": 26,
+            "page": 2,
+            "section_key": "4.2",
+            "text": "4.2 Posology and method of administration"
+          },
+          {
+            "line_index": 194,
+            "page": 6,
+            "section_key": "4.3",
+            "text": "4.3 Contraindications"
+          },
+          {
+            "line_index": 211,
+            "page": 7,
+            "section_key": "4.4",
+            "text": "4.4 Special warnings and precautions for use"
+          },
+          {
+            "line_index": 394,
+            "page": 11,
+            "section_key": "4.5",
+            "text": "4.5 Interaction with other medicinal products and other forms of interaction"
+          },
+          {
+            "line_index": 490,
+            "page": 13,
+            "section_key": "4.6",
+            "text": "4.6 Fertility, pregnancy and lactation"
+          },
+          {
+            "line_index": 504,
+            "page": 13,
+            "section_key": "4.7",
+            "text": "4.7 Effects on ability to drive and use machines"
+          },
+          {
+            "line_index": 507,
+            "page": 14,
+            "section_key": "4.8",
+            "text": "4.8 Undesirable effects"
+          },
+          {
+            "line_index": 682,
+            "page": 18,
+            "section_key": "4.9",
+            "text": "4.9 Overdose"
+          },
+          {
+            "line_index": 715,
+            "page": 18,
+            "section_key": "5",
+            "text": "5. PHARMACOLOGICAL PROPERTIES"
+          },
+          {
+            "line_index": 716,
+            "page": 18,
+            "section_key": "5.1",
+            "text": "5.1 Pharmacodynamic properties"
+          },
+          {
+            "line_index": 1272,
+            "page": 31,
+            "section_key": "5.2",
+            "text": "5.2 Pharmacokinetic properties"
+          },
+          {
+            "line_index": 1393,
+            "page": 34,
+            "section_key": "5.3",
+            "text": "5.3 Preclinical safety data"
+          },
+          {
+            "line_index": 1404,
+            "page": 34,
+            "section_key": "6",
+            "text": "6. PHARMACEUTICAL PARTICULARS"
+          },
+          {
+            "line_index": 1405,
+            "page": 34,
+            "section_key": "6.1",
+            "text": "6.1 List of excipients"
+          },
+          {
+            "line_index": 1419,
+            "page": 35,
+            "section_key": "6.2",
+            "text": "6.2 Incompatibilities"
+          },
+          {
+            "line_index": 1421,
+            "page": 35,
+            "section_key": "6.3",
+            "text": "6.3 Shelf life"
+          },
+          {
+            "line_index": 1423,
+            "page": 35,
+            "section_key": "6.4",
+            "text": "6.4 Special precautions for storage"
+          },
+          {
+            "line_index": 1425,
+            "page": 35,
+            "section_key": "6.5",
+            "text": "6.5 Nature and contents of container"
+          },
+          {
+            "line_index": 1429,
+            "page": 35,
+            "section_key": "6.6",
+            "text": "6.6 Special precautions for disposal"
+          },
+          {
+            "line_index": 1432,
+            "page": 35,
+            "section_key": "7",
+            "text": "7. MARKETING AUTHORISATION HOLDER"
+          },
+          {
+            "line_index": 1438,
+            "page": 35,
+            "section_key": "8",
+            "text": "8. MARKETING AUTHORISATION NUMBER(S)"
+          },
+          {
+            "line_index": 1447,
+            "page": 35,
+            "section_key": "9",
+            "text": "9. DATE OF FIRST AUTHORISATION/RENEWAL OF THE AUTHORISATION"
+          },
+          {
+            "line_index": 1450,
+            "page": 35,
+            "section_key": "10",
+            "text": "10. DATE OF REVISION OF THE TEXT"
+          }
+        ],
+        "first_copy_end_line_index": 1454,
+        "owned_pages_4_8": [
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "excluded_native_tables_outside_owned_pages": 214
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 214,
+      "comparison": {
+        "reference_tables": 3,
+        "native_tables": 3,
+        "matched_tables": 3,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 15,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999865
+          },
+          {
+            "page": 16,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999839
+          },
+          {
+            "page": 17,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999663
+          }
+        ],
+        "reference_rows": 54,
+        "native_rows": 54,
+        "reference_nonempty_cells": 210,
+        "native_nonempty_cells": 210,
+        "reference_cell_alphanumeric_characters": 3557,
+        "native_cell_alphanumeric_characters": 3557,
+        "matched_cell_alphanumeric_characters": 3557,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 51,
+        "native_rust_flattened_lines": 51,
+        "exact_normalized_row_matches": 51,
+        "exact_normalized_row_recall": 1.0,
+        "exact_normalized_row_precision": 1.0,
+        "frequency_association": {
+          "reference_associations": 36,
+          "native_associations": 36,
+          "matched_associations": 36,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "labelled": 3
+          },
+          "native_table_formats": {
+            "labelled": 3
+          },
+          "applicable_reference_tables": 3,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 144,
+          "native_associations": 144,
+          "matched_associations": 144,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 3,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true,
+        "reviewed_source_table_oracle_pass": true
+      },
+      "oracle_case": {
+        "source_pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+        "case_definition": "Table 3: Tabulated adverse reactions; rows Anaemia and Thrombocytopenia in the pinned SmPC",
+        "reference": {
+          "id": "eliquis-en-table-3-frequency-columns",
+          "source_table": "Table 3: Tabulated adverse reactions; rows Anaemia and Thrombocytopenia in the pinned SmPC",
+          "review_note": "Checked against the text of the pinned English PDF: Anaemia is Common in all four indication columns; Thrombocytopenia is Uncommon, Uncommon, Common, Common.",
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Anaemia",
+                "frequency_labels": {
+                  "Common": 4
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Anaemia - Prevention of VTE in adult patients who have undergone elective hip or knee replacement surgery (VTEp): Common; Prevention of stroke and systemic embolism in adult patients with NVAF, with one or more risk factors (NVAF): Common; Treatment of DVT and PE, and prevention of recurrent DVT and PE (VTEt) in adult patients: Common; Treatment of VTE and prevention of recurrent VTE in paediatric patients from 28 days to less than 18 years of age: Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Thrombocytopenia",
+                "frequency_labels": {
+                  "Uncommon": 2,
+                  "Common": 2
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Thrombocytopenia - Prevention of VTE in adult patients who have undergone elective hip or knee replacement surgery (VTEp): Uncommon; Prevention of stroke and systemic embolism in adult patients with NVAF, with one or more risk factors (NVAF): Uncommon; Treatment of DVT and PE, and prevention of recurrent DVT and PE (VTEt) in adult patients: Common; Treatment of VTE and prevention of recurrent VTE in paediatric patients from 28 days to less than 18 years of age: Common"
+              ]
+            }
+          ],
+          "pass": true
+        },
+        "native": {
+          "id": "eliquis-en-table-3-frequency-columns",
+          "source_table": "Table 3: Tabulated adverse reactions; rows Anaemia and Thrombocytopenia in the pinned SmPC",
+          "review_note": "Checked against the text of the pinned English PDF: Anaemia is Common in all four indication columns; Thrombocytopenia is Uncommon, Uncommon, Common, Common.",
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Anaemia",
+                "frequency_labels": {
+                  "Common": 4
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Anaemia - Prevention of VTE in adult patients who have undergone elective hip or knee replacement surgery (VTEp): Common; Prevention of stroke and systemic embolism in adult patients with NVAF, with one or more risk factors (NVAF): Common; Treatment of DVT and PE, and prevention of recurrent DVT and PE (VTEt) in adult patients: Common; Treatment of VTE and prevention of recurrent VTE in paediatric patients from 28 days to less than 18 years of age: Common"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Thrombocytopenia",
+                "frequency_labels": {
+                  "Uncommon": 2,
+                  "Common": 2
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Thrombocytopenia - Prevention of VTE in adult patients who have undergone elective hip or knee replacement surgery (VTEp): Uncommon; Prevention of stroke and systemic embolism in adult patients with NVAF, with one or more risk factors (NVAF): Uncommon; Treatment of DVT and PE, and prevention of recurrent DVT and PE (VTEt) in adult patients: Common; Treatment of VTE and prevention of recurrent VTE in paediatric patients from 28 days to less than 18 years of age: Common"
+              ]
+            }
+          ],
+          "pass": true
+        },
+        "pass": true
+      },
+      "xarelto_independent_4_8_oracle": null,
+      "acceptance_pass": true,
+      "status": "PASS"
+    },
+    {
+      "medicine": "eliquis",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/eliquis-epar-product-information_el.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+      "pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+      "page_count_pymupdf": 209,
+      "page_count_native": 209,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. ΟΝΟΜΑΣΙΑ ΤΟΥ ΦΑΡΜΑΚΕΥΤΙΚΟΥ ΠΡΟΪΌΝΤΟΣ"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. ΠΟΙΟΤΙΚΗ ΚΑΙ ΠΟΣΟΤΙΚΗ ΣΥΝΘΕΣΗ"
+          },
+          {
+            "line_index": 10,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. ΦΑΡΜΑΚΟΤΕΧΝΙΚΗ ΜΟΡΦΗ"
+          },
+          {
+            "line_index": 14,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. ΚΛΙΝΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 15,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Θεραπευτικές ενδείξεις"
+          },
+          {
+            "line_index": 29,
+            "page": 2,
+            "section_key": "4.2",
+            "text": "4.2 Δοσολογία και τρόπος χορήγησης"
+          },
+          {
+            "line_index": 229,
+            "page": 7,
+            "section_key": "4.3",
+            "text": "4.3 Αντενδείξεις"
+          },
+          {
+            "line_index": 250,
+            "page": 7,
+            "section_key": "4.4",
+            "text": "4.4 Ειδικές προειδοποιήσεις και προφυλάξεις κατά τη χρήση"
+          },
+          {
+            "line_index": 471,
+            "page": 12,
+            "section_key": "4.5",
+            "text": "4.5 Αλληλεπιδράσεις με άλλα φαρμακευτικά προϊόντα και άλλες μορφές αλληλεπίδρασης"
+          },
+          {
+            "line_index": 582,
+            "page": 15,
+            "section_key": "4.6",
+            "text": "4.6 Γονιμότητα, κύηση και γαλουχία"
+          },
+          {
+            "line_index": 598,
+            "page": 15,
+            "section_key": "4.7",
+            "text": "4.7 Επιδράσεις στην ικανότητα οδήγησης και χειρισμού μηχανημάτων"
+          },
+          {
+            "line_index": 601,
+            "page": 15,
+            "section_key": "4.8",
+            "text": "4.8 Ανεπιθύμητες ενέργειες"
+          },
+          {
+            "line_index": 902,
+            "page": 21,
+            "section_key": "4.9",
+            "text": "4.9 Υπερδοσολογία"
+          },
+          {
+            "line_index": 943,
+            "page": 22,
+            "section_key": "5",
+            "text": "5. ΦΑΡΜΑΚΟΛΟΓΙΚΕΣ ΙΔΙΟΤΗΤΕΣ"
+          },
+          {
+            "line_index": 944,
+            "page": 22,
+            "section_key": "5.1",
+            "text": "5.1 Φαρμακοδυναμικές ιδιότητες"
+          },
+          {
+            "line_index": 1655,
+            "page": 37,
+            "section_key": "5.2",
+            "text": "5.2 Φαρμακοκινητικές ιδιότητες"
+          },
+          {
+            "line_index": 1793,
+            "page": 40,
+            "section_key": "5.3",
+            "text": "5.3 Προκλινικά δεδομένα για την ασφάλεια"
+          },
+          {
+            "line_index": 1806,
+            "page": 40,
+            "section_key": "6",
+            "text": "6. ΦΑΡΜΑΚΕΥΤΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 1807,
+            "page": 40,
+            "section_key": "6.1",
+            "text": "6.1 Κατάλογος εκδόχων"
+          },
+          {
+            "line_index": 1821,
+            "page": 41,
+            "section_key": "6.2",
+            "text": "6.2 Ασυμβατότητες"
+          },
+          {
+            "line_index": 1823,
+            "page": 41,
+            "section_key": "6.3",
+            "text": "6.3 Διάρκεια ζωής"
+          },
+          {
+            "line_index": 1825,
+            "page": 41,
+            "section_key": "6.4",
+            "text": "6.4 Ιδιαίτερες προφυλάξεις κατά τη φύλαξη του προϊόντος"
+          },
+          {
+            "line_index": 1827,
+            "page": 41,
+            "section_key": "6.5",
+            "text": "6.5 Φύση και συστατικά του περιέκτη"
+          },
+          {
+            "line_index": 1833,
+            "page": 41,
+            "section_key": "6.6",
+            "text": "6.6 Ιδιαίτερες προφυλάξεις απόρριψης"
+          },
+          {
+            "line_index": 1836,
+            "page": 41,
+            "section_key": "7",
+            "text": "7. ΚΑΤΟΧΟΣ ΤΗΣ ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1842,
+            "page": 41,
+            "section_key": "8",
+            "text": "8. ΑΡΙΘΜΟΣ(ΟΙ) ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1851,
+            "page": 41,
+            "section_key": "9",
+            "text": "9. ΗΜΕΡΟΜΗΝΙΑ ΠΡΩΤΗΣ ΕΓΚΡΙΣΗΣ/ΑΝΑΝΕΩΣΗΣ ΤΗΣ ΑΔΕΙΑΣ"
+          },
+          {
+            "line_index": 1854,
+            "page": 41,
+            "section_key": "10",
+            "text": "10. ΗΜΕΡΟΜΗΝΙΑ ΑΝΑΘΕΩΡΗΣΗΣ ΤΟΥ ΚΕΙΜΕΝΟΥ"
+          }
+        ],
+        "first_copy_end_line_index": 1859,
+        "owned_pages_4_8": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21
+        ],
+        "excluded_native_tables_outside_owned_pages": 164
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 164,
+      "comparison": {
+        "reference_tables": 5,
+        "native_tables": 5,
+        "matched_tables": 5,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 17,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999837
+          },
+          {
+            "page": 18,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999828
+          },
+          {
+            "page": 19,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999791
+          },
+          {
+            "page": 20,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999697
+          },
+          {
+            "page": 16,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999657
+          }
+        ],
+        "reference_rows": 59,
+        "native_rows": 59,
+        "reference_nonempty_cells": 226,
+        "native_nonempty_cells": 226,
+        "reference_cell_alphanumeric_characters": 5505,
+        "native_cell_alphanumeric_characters": 5505,
+        "matched_cell_alphanumeric_characters": 5505,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 52,
+        "native_rust_flattened_lines": 52,
+        "exact_normalized_row_matches": 51,
+        "exact_normalized_row_recall": 0.9807692307692307,
+        "exact_normalized_row_precision": 0.9807692307692307,
+        "frequency_association": {
+          "reference_associations": 33,
+          "native_associations": 33,
+          "matched_associations": 33,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "labelled": 5
+          },
+          "native_table_formats": {
+            "labelled": 5
+          },
+          "applicable_reference_tables": 5,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 143,
+          "native_associations": 143,
+          "matched_associations": 143,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 5,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true,
+        "reviewed_source_table_oracle_pass": true
+      },
+      "oracle_case": {
+        "source_pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+        "case_definition": "Πίνακας 3: Ανεπιθύμητες ενέργειες; rows Αναιμία and Θρομβοπενία in the pinned Greek SmPC",
+        "reference": {
+          "id": "eliquis-el-table-3-frequency-columns",
+          "source_table": "Πίνακας 3: Ανεπιθύμητες ενέργειες; rows Αναιμία and Θρομβοπενία in the pinned Greek SmPC",
+          "review_note": "Checked against the text of the pinned Greek PDF: Αναιμία is Συχνές in all four indication columns; Θρομβοπενία is Όχι συχνές, Όχι συχνές, Συχνές, Συχνές.",
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Αναιμία",
+                "frequency_labels": {
+                  "Συχνές": 4
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Αναιμία - Πρόληψη ΦΘΕ σε ενήλικες ασθενείς που έχουν υποβληθεί σε εκλεκτική εγχείρηση αποκατάσ τασης ισχίου ή γόνατος (πρόληψη ΦΘΕ): Συχνές; Πρόληψη αγγειακού εγκεφαλικού επεισοδίου και συστηματικής εμβολής σε ενήλικες ασθενείς με ΜΒΚΜ, με έναν ή περισσότερους παράγοντες κινδύνου (ΜΒΚΜ): Συχνές; Θεραπεία ΕΒΦΘ και ΠΕ και πρόληψη υποτροπιάζουσα ς ΕΒΦΘ και ΠΕ (θεραπεία ΦΘΕ) σε ενήλικες ασθενείς: Συχνές; Θεραπεία της ΦΘΕ και πρόληψη της υποτροπιάζουσας ΦΘΕ σε παιδιατρικούς ασθενείς ηλικίας από 28 ημερών έως κάτω των 18 ετών: Συχνές"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Θρομβοπενία",
+                "frequency_labels": {
+                  "Όχι συχνές": 2,
+                  "Συχνές": 2
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Θρομβοπενία - Πρόληψη ΦΘΕ σε ενήλικες ασθενείς που έχουν υποβληθεί σε εκλεκτική εγχείρηση αποκατάσ τασης ισχίου ή γόνατος (πρόληψη ΦΘΕ): Όχι συχνές; Πρόληψη αγγειακού εγκεφαλικού επεισοδίου και συστηματικής εμβολής σε ενήλικες ασθενείς με ΜΒΚΜ, με έναν ή περισσότερους παράγοντες κινδύνου (ΜΒΚΜ): Όχι συχνές; Θεραπεία ΕΒΦΘ και ΠΕ και πρόληψη υποτροπιάζουσα ς ΕΒΦΘ και ΠΕ (θεραπεία ΦΘΕ) σε ενήλικες ασθενείς: Συχνές; Θεραπεία της ΦΘΕ και πρόληψη της υποτροπιάζουσας ΦΘΕ σε παιδιατρικούς ασθενείς ηλικίας από 28 ημερών έως κάτω των 18 ετών: Συχνές"
+              ]
+            }
+          ],
+          "pass": true
+        },
+        "native": {
+          "id": "eliquis-el-table-3-frequency-columns",
+          "source_table": "Πίνακας 3: Ανεπιθύμητες ενέργειες; rows Αναιμία and Θρομβοπενία in the pinned Greek SmPC",
+          "review_note": "Checked against the text of the pinned Greek PDF: Αναιμία is Συχνές in all four indication columns; Θρομβοπενία is Όχι συχνές, Όχι συχνές, Συχνές, Συχνές.",
+          "checks": [
+            {
+              "expectation": {
+                "reaction_starts_with": "Αναιμία",
+                "frequency_labels": {
+                  "Συχνές": 4
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Αναιμία - Πρόληψη ΦΘΕ σε ενήλικες ασθενείς που έχουν υποβληθεί σε εκλεκτική εγχείρηση αποκατάσ τασης ισχίου ή γόνατος (πρόληψη ΦΘΕ): Συχνές; Πρόληψη αγγειακού εγκεφαλικού επεισοδίου και συστηματικής εμβολής σε ενήλικες ασθενείς με ΜΒΚΜ, με έναν ή περισσότερους παράγοντες κινδύνου (ΜΒΚΜ): Συχνές; Θεραπεία ΕΒΦΘ και ΠΕ και πρόληψη υποτροπιάζουσα ς ΕΒΦΘ και ΠΕ (θεραπεία ΦΘΕ) σε ενήλικες ασθενείς: Συχνές; Θεραπεία της ΦΘΕ και πρόληψη της υποτροπιάζουσας ΦΘΕ σε παιδιατρικούς ασθενείς ηλικίας από 28 ημερών έως κάτω των 18 ετών: Συχνές"
+              ]
+            },
+            {
+              "expectation": {
+                "reaction_starts_with": "Θρομβοπενία",
+                "frequency_labels": {
+                  "Όχι συχνές": 2,
+                  "Συχνές": 2
+                }
+              },
+              "pass": true,
+              "matching_lines": [
+                "Θρομβοπενία - Πρόληψη ΦΘΕ σε ενήλικες ασθενείς που έχουν υποβληθεί σε εκλεκτική εγχείρηση αποκατάσ τασης ισχίου ή γόνατος (πρόληψη ΦΘΕ): Όχι συχνές; Πρόληψη αγγειακού εγκεφαλικού επεισοδίου και συστηματικής εμβολής σε ενήλικες ασθενείς με ΜΒΚΜ, με έναν ή περισσότερους παράγοντες κινδύνου (ΜΒΚΜ): Όχι συχνές; Θεραπεία ΕΒΦΘ και ΠΕ και πρόληψη υποτροπιάζουσα ς ΕΒΦΘ και ΠΕ (θεραπεία ΦΘΕ) σε ενήλικες ασθενείς: Συχνές; Θεραπεία της ΦΘΕ και πρόληψη της υποτροπιάζουσας ΦΘΕ σε παιδιατρικούς ασθενείς ηλικίας από 28 ημερών έως κάτω των 18 ετών: Συχνές"
+              ]
+            }
+          ],
+          "pass": true
+        },
+        "pass": true
+      },
+      "xarelto_independent_4_8_oracle": null,
+      "acceptance_pass": true,
+      "status": "PASS"
+    },
+    {
+      "medicine": "humira",
+      "language": "en",
+      "source_url": "https://www.ema.europa.eu/en/documents/product-information/humira-epar-product-information_en.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "0118f9ea31f7b28ac156bc8449293407c25bc43421a73fa92a30fe90db390eca",
+      "pdf_sha256": "0118f9ea31f7b28ac156bc8449293407c25bc43421a73fa92a30fe90db390eca",
+      "page_count_pymupdf": 288,
+      "page_count_native": 288,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. NAME OF THE MEDICINAL PRODUCT"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. QUALITATIVE AND QUANTITATIVE COMPOSITION"
+          },
+          {
+            "line_index": 11,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. PHARMACEUTICAL FORM"
+          },
+          {
+            "line_index": 14,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. CLINICAL PARTICULARS"
+          },
+          {
+            "line_index": 15,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Therapeutic indications"
+          },
+          {
+            "line_index": 41,
+            "page": 3,
+            "section_key": "4.2",
+            "text": "4.2 Posology and method of administration"
+          },
+          {
+            "line_index": 153,
+            "page": 6,
+            "section_key": "4.3",
+            "text": "4.3 Contraindications"
+          },
+          {
+            "line_index": 157,
+            "page": 6,
+            "section_key": "4.4",
+            "text": "4.4 Special warnings and precautions for use"
+          },
+          {
+            "line_index": 354,
+            "page": 11,
+            "section_key": "4.5",
+            "text": "4.5 Interaction with other medicinal products and other forms of interaction"
+          },
+          {
+            "line_index": 364,
+            "page": 11,
+            "section_key": "4.6",
+            "text": "4.6 Fertility, pregnancy and lactation"
+          },
+          {
+            "line_index": 402,
+            "page": 12,
+            "section_key": "4.7",
+            "text": "4.7 Effects on ability to drive and use machines"
+          },
+          {
+            "line_index": 405,
+            "page": 12,
+            "section_key": "4.8",
+            "text": "4.8 Undesirable effects"
+          },
+          {
+            "line_index": 740,
+            "page": 21,
+            "section_key": "4.9",
+            "text": "4.9 Overdose"
+          },
+          {
+            "line_index": 743,
+            "page": 21,
+            "section_key": "5",
+            "text": "5. PHARMACOLOGICAL PROPERTIES"
+          },
+          {
+            "line_index": 744,
+            "page": 21,
+            "section_key": "5.1",
+            "text": "5.1 Pharmacodynamic properties"
+          },
+          {
+            "line_index": 1493,
+            "page": 39,
+            "section_key": "5.2",
+            "text": "5.2 Pharmacokinetic properties"
+          },
+          {
+            "line_index": 1578,
+            "page": 41,
+            "section_key": "5.3",
+            "text": "5.3 Preclinical safety data"
+          },
+          {
+            "line_index": 1588,
+            "page": 42,
+            "section_key": "6",
+            "text": "6. PHARMACEUTICAL PARTICULARS"
+          },
+          {
+            "line_index": 1589,
+            "page": 42,
+            "section_key": "6.1",
+            "text": "6.1 List of excipients"
+          },
+          {
+            "line_index": 1593,
+            "page": 42,
+            "section_key": "6.2",
+            "text": "6.2 Incompatibilities"
+          },
+          {
+            "line_index": 1596,
+            "page": 42,
+            "section_key": "6.3",
+            "text": "6.3 Shelf life"
+          },
+          {
+            "line_index": 1598,
+            "page": 42,
+            "section_key": "6.4",
+            "text": "6.4 Special precautions for storage"
+          },
+          {
+            "line_index": 1604,
+            "page": 42,
+            "section_key": "6.5",
+            "text": "6.5 Nature and contents of container"
+          },
+          {
+            "line_index": 1609,
+            "page": 42,
+            "section_key": "6.6",
+            "text": "6.6 Special precautions for disposal"
+          },
+          {
+            "line_index": 1612,
+            "page": 42,
+            "section_key": "7",
+            "text": "7. MARKETING AUTHORISATION HOLDER"
+          },
+          {
+            "line_index": 1617,
+            "page": 42,
+            "section_key": "8",
+            "text": "8. MARKETING AUTHORISATION NUMBERS"
+          },
+          {
+            "line_index": 1620,
+            "page": 43,
+            "section_key": "9",
+            "text": "9. DATE OF FIRST AUTHORISATION/RENEWAL OF THE AUTHORISATION"
+          },
+          {
+            "line_index": 1623,
+            "page": 43,
+            "section_key": "10",
+            "text": "10. DATE OF REVISION OF THE TEXT"
+          }
+        ],
+        "first_copy_end_line_index": 1627,
+        "owned_pages_4_8": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21
+        ],
+        "excluded_native_tables_outside_owned_pages": 298
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 298,
+      "comparison": {
+        "reference_tables": 6,
+        "native_tables": 6,
+        "matched_tables": 6,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 16,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999762
+          },
+          {
+            "page": 15,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999751
+          },
+          {
+            "page": 14,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999748
+          },
+          {
+            "page": 17,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999717
+          },
+          {
+            "page": 18,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999533
+          },
+          {
+            "page": 13,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999285
+          }
+        ],
+        "reference_rows": 69,
+        "native_rows": 69,
+        "reference_nonempty_cells": 159,
+        "native_nonempty_cells": 159,
+        "reference_cell_alphanumeric_characters": 4379,
+        "native_cell_alphanumeric_characters": 4379,
+        "matched_cell_alphanumeric_characters": 4379,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 54,
+        "native_rust_flattened_lines": 54,
+        "exact_normalized_row_matches": 53,
+        "exact_normalized_row_recall": 0.9814814814814815,
+        "exact_normalized_row_precision": 0.9814814814814815,
+        "frequency_association": {
+          "reference_associations": 54,
+          "native_associations": 54,
+          "matched_associations": 54,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "labelled": 6
+          },
+          "native_table_formats": {
+            "labelled": 6
+          },
+          "applicable_reference_tables": 6,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 54,
+          "native_associations": 54,
+          "matched_associations": 54,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 6,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true
+      },
+      "oracle_case": null,
+      "xarelto_independent_4_8_oracle": null,
+      "acceptance_pass": true,
+      "status": "PASS"
+    },
+    {
+      "medicine": "humira",
+      "language": "el",
+      "source_url": "https://www.ema.europa.eu/el/documents/product-information/humira-epar-product-information_el.pdf",
+      "source_attribution": "Source: European Medicines Agency (EMA), EPAR product information. Extracted text and cell excerpts in this result remain attributed to EMA.",
+      "manifest_pdf_sha256": "461e0a3562dc733639f0225aed4ca54b5a0f6dc422eceeaa98d90a4521d97687",
+      "pdf_sha256": "461e0a3562dc733639f0225aed4ca54b5a0f6dc422eceeaa98d90a4521d97687",
+      "page_count_pymupdf": 306,
+      "page_count_native": 306,
+      "native_engine": "PDFium 158.0.8125.0 / pdfium-render 0.9.6",
+      "python_reference_first_copy_selection": {
+        "document": "SmPC",
+        "section": "4.8",
+        "selection_source": "Existing Python production extract_lines -> split_sections -> first_copy_headings -> _table_owner_pages; table pages are assigned to 4.8 in the first-copy span.",
+        "first_copy_section_keys": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "4.1",
+          "4.2",
+          "4.3",
+          "4.4",
+          "4.5",
+          "4.6",
+          "4.7",
+          "4.8",
+          "4.9",
+          "5",
+          "5.1",
+          "5.2",
+          "5.3",
+          "6",
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6",
+          "7",
+          "8",
+          "9",
+          "10"
+        ],
+        "accepted_heading_count": 28,
+        "accepted_headings": [
+          {
+            "line_index": 3,
+            "page": 2,
+            "section_key": "1",
+            "text": "1. ΟΝΟΜΑΣΙΑ ΤΟΥ ΦΑΡΜΑΚΕΥΤΙΚΟΥ ΠΡΟΪΟΝΤΟΣ"
+          },
+          {
+            "line_index": 5,
+            "page": 2,
+            "section_key": "2",
+            "text": "2. ΠΟΙΟΤΙΚΗ ΚΑΙ ΠΟΣΟΤΙΚΗ ΣΥΝΘΕΣΗ"
+          },
+          {
+            "line_index": 12,
+            "page": 2,
+            "section_key": "3",
+            "text": "3. ΦΑΡΜΑΚΟΤΕΧΝΙΚΗ ΜΟΡΦΗ"
+          },
+          {
+            "line_index": 15,
+            "page": 2,
+            "section_key": "4",
+            "text": "4. ΚΛΙΝΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 16,
+            "page": 2,
+            "section_key": "4.1",
+            "text": "4.1 Θεραπευτικές ενδείξεις"
+          },
+          {
+            "line_index": 44,
+            "page": 3,
+            "section_key": "4.2",
+            "text": "4.2 Δοσολογία και τρόπος χορήγησης"
+          },
+          {
+            "line_index": 169,
+            "page": 6,
+            "section_key": "4.3",
+            "text": "4.3 Αντενδείξεις"
+          },
+          {
+            "line_index": 174,
+            "page": 6,
+            "section_key": "4.4",
+            "text": "4.4 Ειδικές προειδοποιήσεις και προφυλάξεις κατά τη χρήση"
+          },
+          {
+            "line_index": 415,
+            "page": 12,
+            "section_key": "4.5",
+            "text": "4.5 Αλληλεπιδράσεις με άλλα φαρμακευτικά προϊόντα και άλλες μορφές αλληλεπίδρασης"
+          },
+          {
+            "line_index": 426,
+            "page": 12,
+            "section_key": "4.6",
+            "text": "4.6 Γονιμότητα, κύηση και γαλουχία"
+          },
+          {
+            "line_index": 475,
+            "page": 13,
+            "section_key": "4.7",
+            "text": "4.7 Επιδράσεις στην ικανότητα οδήγησης και χειρισμού μηχανημάτων"
+          },
+          {
+            "line_index": 478,
+            "page": 13,
+            "section_key": "4.8",
+            "text": "4.8 Ανεπιθύμητες ενέργειες"
+          },
+          {
+            "line_index": 878,
+            "page": 22,
+            "section_key": "4.9",
+            "text": "4.9 Υπερδοσολογία"
+          },
+          {
+            "line_index": 882,
+            "page": 22,
+            "section_key": "5",
+            "text": "5. ΦΑΡΜΑΚΟΛΟΓΙΚΕΣ ΙΔΙΟΤΗΤΕΣ"
+          },
+          {
+            "line_index": 883,
+            "page": 22,
+            "section_key": "5.1",
+            "text": "5.1 Φαρμακοδυναμικές ιδιότητες"
+          },
+          {
+            "line_index": 1763,
+            "page": 41,
+            "section_key": "5.2",
+            "text": "5.2 Φαρμακοκινητικές ιδιότητες"
+          },
+          {
+            "line_index": 1859,
+            "page": 43,
+            "section_key": "5.3",
+            "text": "5.3 Προκλινικά δεδομένα για την ασφάλεια"
+          },
+          {
+            "line_index": 1869,
+            "page": 44,
+            "section_key": "6",
+            "text": "6. ΦΑΡΜΑΚΕΥΤΙΚΕΣ ΠΛΗΡΟΦΟΡΙΕΣ"
+          },
+          {
+            "line_index": 1870,
+            "page": 44,
+            "section_key": "6.1",
+            "text": "6.1 Κατάλογος εκδόχων"
+          },
+          {
+            "line_index": 1874,
+            "page": 44,
+            "section_key": "6.2",
+            "text": "6.2 Ασυμβατότητες"
+          },
+          {
+            "line_index": 1877,
+            "page": 44,
+            "section_key": "6.3",
+            "text": "6.3 Διάρκεια ζωής"
+          },
+          {
+            "line_index": 1879,
+            "page": 44,
+            "section_key": "6.4",
+            "text": "6.4 Ιδιαίτερες προφυλάξεις κατά τη φύλαξη του προϊόντος"
+          },
+          {
+            "line_index": 1885,
+            "page": 44,
+            "section_key": "6.5",
+            "text": "6.5 Φύση και συστατικά του περιέκτη"
+          },
+          {
+            "line_index": 1892,
+            "page": 44,
+            "section_key": "6.6",
+            "text": "6.6 Ιδιαίτερες προφυλάξεις απόρριψης"
+          },
+          {
+            "line_index": 1895,
+            "page": 44,
+            "section_key": "7",
+            "text": "7. ΚΑΤΟΧΟΣ ΤΗΣ ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1901,
+            "page": 45,
+            "section_key": "8",
+            "text": "8. ΑΡΙΘΜΟΙ ΑΔΕΙΑΣ ΚΥΚΛΟΦΟΡΙΑΣ"
+          },
+          {
+            "line_index": 1903,
+            "page": 45,
+            "section_key": "9",
+            "text": "9. ΗΜΕΡΟΜΗΝΙΑ ΠΡΩΤΗΣ ΕΓΚΡΙΣΗΣ/ΑΝΑΝΕΩΣΗΣ ΤΗΣ ΑΔΕΙΑΣ"
+          },
+          {
+            "line_index": 1906,
+            "page": 45,
+            "section_key": "10",
+            "text": "10. ΗΜΕΡΟΜΗΝΙΑ ΑΝΑΘΕΩΡΗΣΗΣ ΤΟΥ ΚΕΙΜΕΝΟΥ"
+          }
+        ],
+        "first_copy_end_line_index": 1910,
+        "owned_pages_4_8": [
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22
+        ],
+        "excluded_native_tables_outside_owned_pages": 177
+      },
+      "native_table_schema_errors": [],
+      "native_tables_outside_python_4_8_pages": 177,
+      "comparison": {
+        "reference_tables": 6,
+        "native_tables": 6,
+        "matched_tables": 6,
+        "table_detection_precision": 1.0,
+        "table_detection_recall": 1.0,
+        "table_bbox_iou_match_threshold": 0.25,
+        "table_bbox_matches": [
+          {
+            "page": 17,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999767
+          },
+          {
+            "page": 18,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999757
+          },
+          {
+            "page": 16,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999757
+          },
+          {
+            "page": 15,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999732
+          },
+          {
+            "page": 19,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.999659
+          },
+          {
+            "page": 14,
+            "reference_table_index": 0,
+            "native_table_index": 0,
+            "bbox_iou": 0.99917
+          }
+        ],
+        "reference_rows": 68,
+        "native_rows": 68,
+        "reference_nonempty_cells": 158,
+        "native_nonempty_cells": 158,
+        "reference_cell_alphanumeric_characters": 5140,
+        "native_cell_alphanumeric_characters": 5140,
+        "matched_cell_alphanumeric_characters": 5140,
+        "cell_content_precision": 1.0,
+        "cell_content_recall": 1.0,
+        "reference_flattened_lines": 56,
+        "native_rust_flattened_lines": 56,
+        "exact_normalized_row_matches": 54,
+        "exact_normalized_row_recall": 0.9642857142857143,
+        "exact_normalized_row_precision": 0.9642857142857143,
+        "frequency_association": {
+          "reference_associations": 55,
+          "native_associations": 55,
+          "matched_associations": 55,
+          "precision": 1.0,
+          "recall": 1.0,
+          "missing_reference_rows": [],
+          "unexpected_native_rows": [],
+          "missing_association_count": 0,
+          "unexpected_association_count": 0,
+          "association_key": "existing parser key: reaction-cell alphanumeric character multiset plus normalized frequency-label text"
+        },
+        "column_diagnostics": {
+          "reference_mapping_applicable": true,
+          "mapping_applicability": "applied to reference tables with a supported grid (frequency labels in the header columns) or labelled layout (frequency labels in either header columns or per-indication cells) and at least one reaction/column/frequency association; otherwise marked not applicable",
+          "reference_table_formats": {
+            "labelled": 6
+          },
+          "native_table_formats": {
+            "labelled": 6
+          },
+          "applicable_reference_tables": 6,
+          "unmatched_applicable_reference_tables": 0,
+          "reference_associations": 55,
+          "native_associations": 55,
+          "matched_associations": 55,
+          "precision": 1.0,
+          "recall": 1.0,
+          "matched_tables_used": 6,
+          "column_count_mismatch_count": 0,
+          "column_count_mismatches": [],
+          "table_format_mismatch_count": 0,
+          "table_format_mismatches": [],
+          "missing_reference_column_frequency_associations": 0,
+          "unexpected_native_column_frequency_associations": 0,
+          "missing_examples": [],
+          "unexpected_examples": [],
+          "association_key": "normalized reaction-cell text + zero-based column index + detected frequency label"
+        }
+      },
+      "criteria": {
+        "native_table_schema_valid": true,
+        "reference_4_8_tables_present": true,
+        "native_table_detection_precision_at_least_0_90": true,
+        "native_table_detection_recall_at_least_0_90": true,
+        "cell_content_precision_at_least_0_95": true,
+        "cell_content_recall_at_least_0_95": true,
+        "frequency_association_precision_at_least_0_95": true,
+        "frequency_association_recall_at_least_0_95": true,
+        "reaction_column_frequency_precision_at_least_0_95_when_reference_mapping_is_supported": true,
+        "reaction_column_frequency_recall_at_least_0_95_when_reference_mapping_is_supported": true,
+        "no_reaction_column_frequency_assignment_mismatches": true
+      },
+      "oracle_case": null,
+      "xarelto_independent_4_8_oracle": null,
+      "acceptance_pass": true,
+      "status": "PASS"
+    }
+  ]
+}

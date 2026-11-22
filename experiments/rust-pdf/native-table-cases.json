@@ -1,0 +1,729 @@
+{
+  "schema_version": 2,
+  "attribution": "Source: European Medicines Agency (EMA), EPAR product information. The expected excerpts and checks below are derived from the pinned PDFs and existing independent acceptance assertions; they are not generated from Rust candidate output.",
+  "cases": [
+    {
+      "id": "xarelto-en-independent-frequency-and-soc-oracle",
+      "medicine": "xarelto",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "296cd19bd9d543e8a553e31f26d947abea5c7cc81862818289ca4c4ece9a3aa9",
+      "source_table": "Tabulated list of adverse reactions; pinned source table and tests/test_m1_acceptance.py:208-264",
+      "checks": [
+        {"reaction_starts_with": "Anaemia", "frequency_labels": {"Common": 1}},
+        {"reaction_starts_with": "Thrombocytosis", "frequency_labels": {"Uncommon": 1}},
+        {"reaction_starts_with": "Eye haemorrhage", "frequency_labels": {"Common": 1}},
+        {"reaction_starts_with": "Hypotension", "frequency_labels": {"Common": 1}},
+        {"not_glued_pair": ["Anaemia", "Thrombocytosis"]},
+        {"unbanded_soc_heading": "Eye disorders"},
+        {"unbanded_soc_heading": "Nervous system disorders"},
+        {"unbanded_soc_heading": "Vascular disorders"}
+      ]
+    },
+    {
+      "id": "eliquis-en-table-3-frequency-columns",
+      "medicine": "eliquis",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "2c0830820630062f4840bfa3480c75f2e906f4d88046edf420c3e31195b50b2d",
+      "source_table": "Table 3: Tabulated adverse reactions; rows Anaemia and Thrombocytopenia in the pinned SmPC",
+      "review_note": "Checked against the text of the pinned English PDF: Anaemia is Common in all four indication columns; Thrombocytopenia is Uncommon, Uncommon, Common, Common.",
+      "checks": [
+        {"reaction_starts_with": "Anaemia", "frequency_labels": {"Common": 4}},
+        {"reaction_starts_with": "Thrombocytopenia", "frequency_labels": {"Uncommon": 2, "Common": 2}}
+      ]
+    },
+    {
+      "id": "eliquis-el-table-3-frequency-columns",
+      "medicine": "eliquis",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "abc0d9cb77ba917edb984ba7ae8075943a29f48fd4f16413c58f052eeb8435ea",
+      "source_table": "Πίνακας 3: Ανεπιθύμητες ενέργειες; rows Αναιμία and Θρομβοπενία in the pinned Greek SmPC",
+      "review_note": "Checked against the text of the pinned Greek PDF: Αναιμία is Συχνές in all four indication columns; Θρομβοπενία is Όχι συχνές, Όχι συχνές, Συχνές, Συχνές.",
+      "checks": [
+        {"reaction_starts_with": "Αναιμία", "frequency_labels": {"Συχνές": 4}},
+        {"reaction_starts_with": "Θρομβοπενία", "frequency_labels": {"Όχι συχνές": 2, "Συχνές": 2}}
+      ]
+    }
+  ],
+  "source_reference_fixtures": [
+    {
+      "id": "lyrica-en-table-2-page-10",
+      "medicine": "lyrica",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "b911bddbab432f8a0fcedb9c67537bff55e0bf53d314c31c88869bca834605af",
+      "page": 10,
+      "table_index": 0,
+      "bbox_pt": [76.19, 107.68, 522.73, 766.52],
+      "provenance": "Manual transcription of pinned English SmPC Table 2 page 10, checked against source text positions: frequency labels start at x=81.6 pt and reactions at x=215.9 pt. PyMuPDF merges both columns and the SOC headings into one cell.",
+      "rows": [
+        ["System Organ Class", "Adverse drug reactions"],
+        ["Infections and infestations", ""],
+        ["Common", "Nasopharyngitis"],
+        ["Blood and lymphatic system disorders", ""],
+        ["Uncommon", "Neutropaenia"],
+        ["Immune system disorders", ""],
+        ["Uncommon", "Hypersensitivity"],
+        ["Rare", "Angioedema, allergic reaction"],
+        ["Metabolism and nutrition disorders", ""],
+        ["Common", "Appetite increased"],
+        ["Uncommon", "Anorexia, hypoglycaemia"],
+        ["Psychiatric disorders", ""],
+        ["Common", "Euphoric mood, confusion, irritability, disorientation, insomnia, libido decreased"],
+        ["Uncommon", "Hallucination, panic attack, restlessness, agitation, depression, depressed mood, elevated mood, aggression, mood swings, depersonalisation, word finding difficulty, abnormal dreams, libido increased, anorgasmia, apathy"],
+        ["Rare", "Disinhibition, suicidal behaviour, suicidal ideation"],
+        ["Not known", "Drug dependence"],
+        ["Nervous system disorders", ""],
+        ["Very Common", "Dizziness, somnolence, headache"],
+        ["Common", "Ataxia, coordination abnormal, tremor, dysarthria, amnesia, memory impairment, disturbance in attention, paraesthesia, hypoaesthesia, sedation, balance disorder, lethargy"],
+        ["Uncommon", "Syncope, stupor, myoclonus, loss of consciousness, psychomotor hyperactivity, dyskinesia, dizziness postural, intention tremor, nystagmus, cognitive disorder, mental impairment, speech disorder, hyporeflexia, hyperaesthesia, burning sensation, ageusia, malaise"],
+        ["Rare", "Convulsions, parosmia, hypokinesia, dysgraphia, parkinsonism"],
+        ["Eye disorders", ""],
+        ["Common", "Vision blurred, diplopia"],
+        ["Uncommon", "Peripheral vision loss, visual disturbance, eye swelling, visual field defect, visual acuity reduced, eye pain, asthenopia, photopsia, dry eye, lacrimation increased, eye irritation"],
+        ["Rare", "Vision loss, keratitis, oscillopsia, altered visual depth perception, mydriasis, strabismus, visual brightness"],
+        ["Ear and labyrinth disorders", ""],
+        ["Common", "Vertigo"],
+        ["Uncommon", "Hyperacusis"],
+        ["Cardiac disorders", ""],
+        ["Uncommon", "Tachycardia, atrioventricular block first degree, sinus bradycardia, congestive heart failure"],
+        ["Rare", "QT prolongation, sinus tachycardia, sinus arrhythmia"],
+        ["Vascular disorders", ""],
+        ["Uncommon", "Hypotension, hypertension, hot flushes, flushing, peripheral coldness"],
+        ["Respiratory, thoracic and mediastinal disorders", ""],
+        ["Uncommon", "Dyspnoea, epistaxis, cough, nasal congestion, rhinitis, snoring, nasal dryness"],
+        ["Rare", "Pulmonary oedema, throat tightness"],
+        ["Not known", "Respiratory depression"]
+      ]
+    },
+    {
+      "id": "lyrica-en-table-2-page-11",
+      "medicine": "lyrica",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "b911bddbab432f8a0fcedb9c67537bff55e0bf53d314c31c88869bca834605af",
+      "page": 11,
+      "table_index": 0,
+      "bbox_pt": [76.19, 57.04, 522.73, 538.40],
+      "provenance": "Manual transcription of pinned English SmPC Table 2 continuation on page 11, checked against source text positions and excluding the footnote below the table. PyMuPDF merges both columns and the SOC headings into one cell.",
+      "rows": [
+        ["System Organ Class", "Adverse drug reactions"],
+        ["Gastrointestinal disorders", ""],
+        ["Common", "Vomiting, nausea, constipation, diarrhoea, flatulence, abdominal distension, dry mouth"],
+        ["Uncommon", "Gastrooesophageal reflux disease, salivary hypersecretion, hypoaesthesia oral"],
+        ["Rare", "Ascites, pancreatitis, swollen tongue, dysphagia"],
+        ["Hepatobiliary disorders", ""],
+        ["Uncommon", "Elevated liver enzymes*"],
+        ["Rare", "Jaundice"],
+        ["Very rare", "Hepatic failure, hepatitis"],
+        ["Skin and subcutaneous tissue disorders", ""],
+        ["Uncommon", "Rash papular, urticaria, hyperhidrosis, pruritus"],
+        ["Rare", "Toxic epidermal necrolysis, Stevens-Johnson syndrome, cold sweat"],
+        ["Musculoskeletal and connective tissue disorders", ""],
+        ["Common", "Muscle cramp, arthralgia, back pain, pain in limb, cervical spasm"],
+        ["Uncommon", "Joint swelling, myalgia, muscle twitching, neck pain, muscle stiffness"],
+        ["Rare", "Rhabdomyolysis"],
+        ["Renal and urinary disorders", ""],
+        ["Uncommon", "Urinary incontinence, dysuria"],
+        ["Rare", "Renal failure, oliguria, urinary retention"],
+        ["Reproductive system and breast disorders", ""],
+        ["Common", "Erectile dysfunction"],
+        ["Uncommon", "Sexual dysfunction, ejaculation delayed, dysmenorrhoea, breast pain"],
+        ["Rare", "Amenorrhoea, breast discharge, breast enlargement, gynaecomastia"],
+        ["General disorders and administration site conditions", ""],
+        ["Common", "Oedema peripheral, oedema, gait abnormal, fall, feeling drunk, feeling abnormal, fatigue"],
+        ["Uncommon", "Generalised oedema, face oedema, chest tightness, pain, pyrexia, thirst, chills, asthenia"],
+        ["Investigations", ""],
+        ["Common", "Weight increased"],
+        ["Uncommon", "Blood creatine phosphokinase increased, blood glucose increased, platelet count decreased, blood creatinine increased, blood potassium decreased, weight decreased"],
+        ["Rare", "White blood cell count decreased"]
+      ]
+    },
+    {
+      "id": "lyrica-el-table-2-page-11",
+      "medicine": "lyrica",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "14600bfc30cc794a2533be8a3bfe04663fdfb9607ccee0eed3a53de9eb773b0c",
+      "page": 11,
+      "table_index": 0,
+      "bbox_pt": [97.0, 78.1, 517.0, 720.7],
+      "provenance": "Manual transcription of pinned PDF Table 2, page 11, checked against the rendered source page; the table is borderless and PyMuPDF returns no table.",
+      "rows": [
+        ["Κατηγορία/Οργανικό Σύστημα", "Ανεπιθύμητες Ενέργειες Φαρμάκου"],
+        ["Λοιμώξεις και παρασιτώσεις", ""],
+        ["Συχνές", "Ρινοφαρυγγίτιδα"],
+        ["Διαταραχές του αίματος και του λεμφικού συστήματος", ""],
+        ["Όχι συχνές", "Ουδετεροπενία"],
+        ["Διαταραχές του ανοσοποιητικού συστήματος", ""],
+        ["Όχι συχνές", "Υπερευαισθησία"],
+        ["Σπάνιες", "Αγγειοοίδημα, αλλεργική αντίδραση"],
+        ["Μεταβολικές και διατροφικές διαταραχές", ""],
+        ["Συχνές", "Όρεξη αυξημένη"],
+        ["Όχι συχνές", "Ανορεξία, υπογλυκαιμία"],
+        ["Ψυχιατρικές Διαταραχές", ""],
+        ["Συχνές", "Ευφορική συναισθηματική διάθεση, σύγχυση, ευερεθιστότητα, αποπροσανατολισμός, αϋπνία, μειωμένη γενετήσια ορμή"],
+        ["Όχι συχνές", "Ψευδαίσθηση, κρίση πανικού, ανησυχία, διέγερση, κατάθλιψη, καταθλιπτική διάθεση, εξηρμένη συναισθηματική διάθεση, επιθετικότητα, διακυμάνσεις της συναισθηματικής διάθεσης, αποπροσωποποίηση, δυσκολία ανάκλησης λέξεων, διαταραγμένα όνειρα, αυξημένη γενετήσια ορμή, ανοργασμία, απάθεια"],
+        ["Σπάνιες", "Άρση αναστολής, αυτοκτονική συμπεριφορά, αυτοκτονικός ιδεασμός"],
+        ["Μη γνωστές", "Φαρμακευτική εξάρτηση"],
+        ["Διαταραχές του νευρικού συστήματος", ""],
+        ["Πολύ συχνές", "Ζάλη, υπνηλία, κεφαλαλγία"],
+        ["Συχνές", "Αταξία, μη φυσιολογικός συντονισμός, τρόμος, δυσαρθρία, αμνησία, επηρεασμένη μνήμη, διαταραχή στην προσοχή, παραισθησία, υπαισθησία, καταστολή, διαταραχή της ισορροπίας, λήθαργος"],
+        ["Όχι συχνές", "Συγκοπή, λήθαργος, μυόκλωνος, απώλεια συνείδησης, ψυχοκινητική υπερκινητικότητα, δυσκινησία, ζάλη θέσης, τρόμος κατά τις εκούσιες κινήσεις, νυσταγμός, νοητική διαταραχή, επηρεασμένη διανοητική κατάσταση, διαταραχή λόγου, ελάττωση αντανακλαστικών, υπεραισθησία, αίσθηση καύσου, αγευσία, αίσθημα κακουχίας"],
+        ["Σπάνιες", "Σπασμοί, παροσμία, υποκινησία, δυσγραφία, παρκινσονισμός"],
+        ["Διαταραχές του οφθαλμού", ""],
+        ["Συχνές", "Όραση θαμπή, διπλωπία"],
+        ["Όχι συχνές", "Απώλεια περιφερικής όρασης, οπτική διαταραχή, οίδημα του οφθαλμού, έλλειμμα στα οπτικά πεδία, οπτική οξύτητα μειωμένη, πόνος του οφθαλμού, ασθενωπία, φωτοψία, ξηροφθαλμία, δακρύρροια αυξημένη, ερεθισμός του οφθαλμού"],
+        ["Σπάνιες", "Απώλεια όρασης, κερατίτιδα, όραση κατά την οποία τα αντικείμενα φαίνονται ταλαντευόμενα, αλλοιωμένη οπτική αντίληψη του βάθους, μυδρίαση, στραβισμός, λάμπον βλέμμα"],
+        ["Διαταραχές του ωτός και του λαβυρίνθου", ""],
+        ["Συχνές", "Ίλιγγος"],
+        ["Όχι συχνές", "Υπερακοΐα"],
+        ["Καρδιακές διαταραχές", ""],
+        ["Όχι συχνές", "Ταχυκαρδία, κολποκοιλιακός αποκλεισμός πρώτου βαθμού, φλεβοκομβική βραδυκαρδία, συμφορητική καρδιακή ανεπάρκεια"],
+        ["Σπάνιες", "Παράταση διαστήματος QT, φλεβοκομβική ταχυκαρδία, φλεβοκομβική αρρυθμία"],
+        ["Αγγειακές διαταραχές", ""],
+        ["Όχι συχνές", "Υπόταση, υπέρταση, εξάψεις, έξαψη, περιφερική ψυχρότητα"]
+      ]
+    },
+    {
+      "id": "lyrica-el-table-2-page-12",
+      "medicine": "lyrica",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "14600bfc30cc794a2533be8a3bfe04663fdfb9607ccee0eed3a53de9eb773b0c",
+      "page": 12,
+      "table_index": 0,
+      "bbox_pt": [97.0, 54.3, 519.8, 613.2],
+      "provenance": "Manual transcription of pinned PDF Table 2 continuation, page 12, checked against rendered source text; the borderless table ends above the footnote at y=614.0 pt and PyMuPDF returns no table.",
+      "rows": [
+        ["Κατηγορία/Οργανικό Σύστημα", "Ανεπιθύμητες Ενέργειες Φαρμάκου"],
+        ["Αναπνευστικές, θωρακικές διαταραχές και διαταραχές μεσοθωρακίου", ""],
+        ["Όχι συχνές", "Δύσπνοια, επίσταξη, βήχας, ρινική συμφόρηση, ρινίτιδα, ρογχαλητό, ξηρότητα ρινικού βλεννογόνου"],
+        ["Σπάνιες", "Πνευμονικό οίδημα, συσφιγκτικό αίσθημα λαιμού"],
+        ["Μη γνωστής συχνότητας", "Αναπνευστική καταστολή"],
+        ["Γαστρεντερικές διαταραχές", ""],
+        ["Συχνές", "Έμετος, ναυτία, δυσκοιλιότητα, διάρροια, μετεωρισμός, διάταση της κοιλίας, ξηροστομία"],
+        ["Όχι συχνές", "Γαστροοισοφαγική παλινδρόμηση, υπερέκκριση σιέλου, υπαισθησία στόματος"],
+        ["Σπάνιες", "Ασκίτης, παγκρεατίτιδα, οίδημα γλώσσας, δυσφαγία"],
+        ["Ηπατοχολικές διαταραχές", ""],
+        ["Όχι συχνές", "Αυξημένα ηπατικά ένζυμα*"],
+        ["Σπάνιες", "Ίκτερος"],
+        ["Πολύ σπάνιες", "Ηπατική ανεπάρκεια, ηπατίτιδα"],
+        ["Διαταραχές του δέρματος και του υποδόριου ιστού", ""],
+        ["Όχι συχνές", "Εξάνθημα βλατιδώδες, κνίδωση υπεριδρωσία, κνησμός"],
+        ["Σπάνιες", "Τοξική επιδερμική νεκρόλυση, σύνδρομο Stevens-Johnson, κρύος ιδρώτας"],
+        ["Διαταραχές του μυοσκελετικού συστήματος και του συνδετικού ιστού", ""],
+        ["Συχνές", "Μυϊκή κράμπα, αρθραλγία, οσφυαλγία, πόνος σε άκρο, αυχενικός σπασμός"],
+        ["Όχι συχνές", "Διόγκωση άρθρωσης, μυαλγία, μυϊκές δεσμιδώσεις, αυχεναλγία, μυϊκή δυσκαμψία"],
+        ["Σπάνιες", "Ραβδομυόλυση"],
+        ["Διαταραχές των νεφρών και των ουροφόρων οδών", ""],
+        ["Όχι συχνές", "Ακράτεια ούρων, δυσουρία"],
+        ["Σπάνιες", "Νεφρική ανεπάρκεια, ολιγουρία, κατακράτηση ούρων"],
+        ["Διαταραχές του αναπαραγωγικού συστήματος και του μαστού", ""],
+        ["Συχνές", "Στυτική δυσλειτουργία"],
+        ["Όχι συχνές", "Σεξουαλική δυσλειτουργία, καθυστέρηση εκσπερμάτισης, δυσμηνόρροια, μαστοδυνία"],
+        ["Σπάνιες", "Αμηνόρροια, έκκριση μαστού, αύξηση του μεγέθους του μαστού, γυναικομαστία"],
+        ["Γενικές διαταραχές και καταστάσεις στη θέση χορήγησης", ""],
+        ["Συχνές", "Οίδημα περιφερικό, οίδημα, βάδισμα μη φυσιολογικό, πτώση, αίσθηση μέθης, αίσθηση μη φυσιολογική, κόπωση"],
+        ["Όχι συχνές", "Γενικευμένο οίδημα, οίδημα προσώπου, αίσθημα σύσφιγξης του θώρακα, άλγος, πυρεξία, δίψα, ρίγη, εξασθένιση"],
+        ["Παρακλινικές εξετάσεις", ""],
+        ["Συχνές", "Σωματικό βάρος αυξημένο"],
+        ["Όχι συχνές", "Κρεατινοφωσφοκινάση αίματος αυξημένη, γλυκόζη αίματος αυξημένη, αριθμός αιμοπεταλίων μειωμένος, κρεατινίνη αίματος αυξημένη, κάλιο αίματος μειωμένο, σωματικό βάρος μειωμένο"],
+        ["Σπάνιες", "Αριθμός λευκοκυττάρων μειωμένος"]
+      ]
+    },
+    {
+      "id": "stelara-en-table-4-page-8",
+      "medicine": "stelara",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6a0c49632e19ff1155ec52b57eff985c2b5fe19c1a8b9a5771ebf66d9d2755b7",
+      "page": 8,
+      "table_index": 0,
+      "bbox_pt": [76.2, 462.0, 517.8, 768.6],
+      "provenance": "Manual transcription of the visible borderless Table 4 on pinned PDF page 8; PyMuPDF returns no table, and the rows were checked against the rendered source page.",
+      "rows": [
+        ["Table 4: List of adverse reactions", ""],
+        ["System Organ Class", "Frequency: Adverse reaction"],
+        ["Infections and infestations", "Common: Upper respiratory tract infection, nasopharyngitis, sinusitis\nUncommon: Cellulitis, dental infections, herpes zoster, lower respiratory tract infection, viral upper respiratory tract infection, vulvovaginal mycotic infection"],
+        ["Immune system disorders", "Uncommon: Hypersensitivity reactions (including rash, urticaria)\nRare: Serious hypersensitivity reactions (including anaphylaxis, angioedema)"],
+        ["Psychiatric disorders", "Uncommon: Depression"],
+        ["Nervous system disorders", "Common: Dizziness, headache\nUncommon: Facial palsy"],
+        ["Respiratory, thoracic and mediastinal disorders", "Common: Oropharyngeal pain\nUncommon: Nasal congestion\nRare: Allergic alveolitis, eosinophilic pneumonia\nVery rare: Organising pneumonia*"],
+        ["Gastrointestinal disorders", "Common: Diarrhoea, nausea, vomiting"]
+      ]
+    },
+    {
+      "id": "stelara-en-table-4-page-9",
+      "medicine": "stelara",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6a0c49632e19ff1155ec52b57eff985c2b5fe19c1a8b9a5771ebf66d9d2755b7",
+      "page": 9,
+      "table_index": 0,
+      "bbox_pt": [76.2, 57.7, 509.5, 197.4],
+      "provenance": "Manual transcription of the visible continuation of Table 4 on pinned PDF page 9; checked against the rendered source page, where the SOC and reaction columns are physically ruled.",
+      "rows": [
+        ["Skin and subcutaneous tissue disorders", "Common: Pruritus\nUncommon: Pustular psoriasis, skin exfoliation, acne\nRare: Exfoliative dermatitis, hypersensitivity vasculitis\nVery rare: Bullous pemphigoid, cutaneous lupus erythematosus"],
+        ["Musculoskeletal and connective tissue disorders", "Common: Back pain, myalgia, arthralgia\nVery rare: Lupus-like syndrome"],
+        ["General disorders and administration site conditions", "Common: Fatigue, injection site erythema, injection site pain\nUncommon: Injection site reactions (including haemorrhage, haematoma, induration, swelling and pruritus), asthenia"]
+      ]
+    },
+    {
+      "id": "ocrevus-en-table-2-page-12",
+      "medicine": "ocrevus",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6b0d6110438994b797b8a98f00722dd926d4ce7ddf6922009fcf45cecda87372",
+      "page": 12,
+      "table_index": 0,
+      "bbox_pt": [70.3, 207.2, 527.1, 595.7],
+      "provenance": "Manual transcription of pinned PDF Table 2, verified against the rendered four-column source table on page 12. PyMuPDF's three detections are malformed fragments and do not preserve its four source columns.",
+      "rows": [
+        ["MedDRA System Organ Class (SOC)", "Very common", "Common", "Not Known"],
+        ["Infections and infestations", "Upper respiratory tract infection, COVID-19, nasopharyngitis, influenza", "Sinusitis, bronchitis, oral herpes, gastroenteritis, respiratory tract infection, COVID-19 pneumonia, viral infection, herpes zoster, conjunctivitis, cellulitis", ""],
+        ["Blood and lymphatic system disorders", "", "Neutropenia", "Late onset of Neutropenia2"],
+        ["Respiratory, thoracic and mediastinal disorders", "", "Cough, catarrh", ""],
+        ["Investigations", "Blood immunoglobulin M decreased", "Blood immunoglobulin G decreased", ""],
+        ["Injury, poisoning and procedural complications", "Infusion-related reactions1", "", ""]
+      ]
+    },
+    {
+      "id": "rybelsus-el-table-1-page-8",
+      "medicine": "rybelsus",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "aa5dfee3f8a99257e70335cda5cdb13887a8b084cf6733add8d87ff1138fecdc",
+      "page": 8,
+      "table_index": 0,
+      "bbox_pt": [76.6, 624.9, 520.8, 780.1],
+      "provenance": "Manual transcription of the pinned Greek SmPC Table 1 page-8 fragment, reconstructed from its visible six-frequency-column source grid and checked against the rendered source page; the final row continues on page 9 and only the text visible on this page is transcribed.",
+      "rows": [
+        ["Κατηγορία οργανικού συστήματος MedDRA", "Πολύ συχνές", "Συχνές", "Όχι συχνές", "Σπάνιες", "Πολύ σπάνιες", "Μη γνωστής συχνότητας"],
+        ["Διαταραχές του ανοσοποιητικού συστήματος", "", "", "Υπερευαισθησίαγ", "Αναφυλακτική αντίδραση", "", ""],
+        ["Μεταβολικές και", "Υπογλυκαιμία, όταν", "Υπογλυκαιμία, όταν", "", "", "", ""]
+      ]
+    },
+    {
+      "id": "rybelsus-el-table-1-page-9",
+      "medicine": "rybelsus",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "aa5dfee3f8a99257e70335cda5cdb13887a8b084cf6733add8d87ff1138fecdc",
+      "page": 9,
+      "table_index": 0,
+      "bbox_pt": [76.6, 55.8, 521.3, 682.2],
+      "provenance": "Manual transcription of the pinned Greek SmPC Table 1 continuation on page 9, checked against its visible six-frequency-column grid; the first row continues page 8 and footnotes below the table are excluded.",
+      "rows": [
+        ["Κατηγορία οργανικού συστήματος MedDRA", "Πολύ συχνές", "Συχνές", "Όχι συχνές", "Σπάνιες", "Πολύ σπάνιες", "Μη γνωστής συχνότητας"],
+        ["διατροφικές διαταραχές", "χρησιμοποιείται με ινσουλίνη ή σουλφονυλουρίαα", "χρησιμοποιείται με άλλα από του στόματος αντιδιαβητικά προϊόνταα\nΜειωμένη όρεξη", "", "", "", ""],
+        ["Διαταραχές του νευρικού συστήματος", "", "Ζάλη\nΔυσαισθησίαε\nKεφαλαλγία", "Δυσγευσία", "", "", ""],
+        ["Διαταραχές του οφθαλμού", "", "Επιπλοκές διαβητικής αμφιβληστροειδοπάθειαςβ", "", "", "Μη αρτηριτιδική πρόσθια ισχαιμική οπτική νευροπάθεια (NAION)", ""],
+        ["Καρδιακές διαταραχές", "", "", "Αυξημένος καρδιακός ρυθμός", "", "", ""],
+        ["Γαστρεντερικές διαταραχές", "Ναυτία\nΔιάρροια", "Έμετος\nΚοιλιακό άλγος\nΚοιλιακή διάταση\nΔυσκοιλιότητα\nΔυσπεψία\nΓαστρίτιδα\nΓαστροοισοφαγική παλινδρόμηση\nΜετεωρισμός", "Ερυγή\nKαθυστερημένη γαστρική κένωση", "Οξεία παγκρεατίτιδα", "", "Εντερική απόφραξηδ,στ"],
+        ["Ηπατοχολικές διαταραχές", "", "", "Χολολιθίαση", "", "", ""],
+        ["Γενικές διαταραχές και καταστάσεις στη θέση χορήγησης", "", "Κόπωση", "", "", "", ""],
+        ["Παρακλινικές εξετάσεις", "", "Αυξημένη λιπάση\nΑυξημένη αμυλάση", "Μείωση βάρους", "", "", ""]
+      ]
+    },
+    {
+      "id": "remicade-en-table-1-page-15",
+      "medicine": "remicade",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "3fe5ec643ebd8b47f3d2adf8a19ade1224c614e70c07c2d563b0cf68054693ab",
+      "page": 15,
+      "table_index": 0,
+      "bbox_pt": [73.6, 57.1, 517.3, 782.2],
+      "provenance": "Manual transcription of the pinned English SmPC adverse-reaction table continuation on page 15; the source page visibly contains SOC and frequency-labelled reaction groups, but PyMuPDF returns no table there.",
+      "rows": [
+        ["Not known:\nVaccine breakthrough infection (after in utero exposure to infliximab)*."],
+        ["Neoplasms benign, malignant and unspecified (including cysts and polyps)\nRare:\nLymphoma, non-Hodgkin’s lymphoma, Hodgkin’s disease, leukaemia, melanoma, cervical cancer.\nNot known:\nHepatosplenic T-cell lymphoma (primarily in adolescents and young adult males with Crohn’s disease or ulcerative colitis), Merkel cell carcinoma, Kaposi’s sarcoma."],
+        ["Blood and lymphatic system disorders\nCommon:\nNeutropenia, leucopenia, anaemia, lymphadenopathy.\nUncommon:\nThrombocytopenia, lymphopenia, lymphocytosis.\nRare:\nAgranulocytosis (including infants exposed in utero to infliximab), thrombotic thrombocytopenic purpura, pancytopenia, haemolytic anaemia, idiopathic thrombocytopenic purpura."],
+        ["Immune system disorders\nCommon:\nAllergic respiratory symptom.\nUncommon:\nAnaphylactic reaction, lupus-like syndrome, serum sickness or serum sickness-like reaction.\nRare:\nAnaphylactic shock, vasculitis, sarcoid-like reaction."],
+        ["Metabolism and nutrition disorders\nUncommon:\nDyslipidaemia."],
+        ["Psychiatric disorders\nCommon:\nDepression, insomnia.\nUncommon:\nAmnesia, agitation, confusion, somnolence, nervousness.\nRare:\nApathy."],
+        ["Nervous system disorders\nVery common:\nHeadache.\nCommon:\nVertigo, dizziness, hypoaesthesia, paraesthesia.\nUncommon:\nSeizure, neuropathy.\nRare:\nTransverse myelitis, central nervous system demyelinating disorders (multiple sclerosis-like disease and optic neuritis), peripheral demyelinating disorders (such as Guillain-Barré syndrome, chronic inflammatory demyelinating polyneuropathy and multifocal motor neuropathy).\nNot known:\nCerebrovascular accidents in close temporal association with infusion."],
+        ["Eye disorders\nCommon:\nConjunctivitis.\nUncommon:\nKeratitis, periorbital oedema, hordeolum.\nRare:\nEndophthalmitis.\nNot known:\nTransient visual loss occurring during or within 2 hours of infusion."],
+        ["Cardiac disorders\nCommon:\nTachycardia, palpitation.\nUncommon:\nCardiac failure (new onset or worsening), arrhythmia, syncope, bradycardia.\nRare:\nCyanosis, pericardial effusion.\nNot known:\nMyocardial ischaemia/myocardial infarction."],
+        ["Vascular disorders\nCommon:\nHypotension, hypertension, ecchymosis, hot flush, flushing.\nUncommon:\nPeripheral ischaemia, thrombophlebitis, haematoma.\nRare:\nCirculatory failure, petechia, vasospasm."]
+      ]
+    },
+    {
+      "id": "remicade-en-table-1-page-16",
+      "medicine": "remicade",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "3fe5ec643ebd8b47f3d2adf8a19ade1224c614e70c07c2d563b0cf68054693ab",
+      "page": 16,
+      "table_index": 0,
+      "bbox_pt": [68.15, 56.89, 527.24, 745.13],
+      "provenance": "Pinned English SmPC Table 1 continuation on page 16, transcribed from the source page. PyMuPDF places only the final SOC/frequency/reaction block in a spurious second column despite its alignment with the preceding blocks.",
+      "rows": [
+        ["Respiratory, thoracic and mediastinal disorders\nVery common: Upper respiratory tract infection, sinusitis.\nCommon: Lower respiratory tract infection (e.g. bronchitis, pneumonia), dyspnoea, epistaxis.\nUncommon: Pulmonary oedema, bronchospasm, pleurisy, pleural effusion.\nRare: Interstitial lung disease (including rapidly progressive disease, lung fibrosis and pneumonitis)."],
+        ["Gastrointestinal disorders\nVery common: Abdominal pain, nausea.\nCommon: Gastrointestinal haemorrhage, diarrhoea, dyspepsia, gastroesophageal reflux, constipation.\nUncommon: Intestinal perforation, intestinal stenosis, diverticulitis, pancreatitis, cheilitis."],
+        ["Hepatobiliary disorders\nCommon: Hepatic function abnormal, transaminases increased.\nUncommon: Hepatitis, hepatocellular damage, cholecystitis.\nRare: Autoimmune hepatitis, jaundice.\nNot known: Liver failure."],
+        ["Skin and subcutaneous tissue disorders\nCommon: New onset or worsening psoriasis including pustular psoriasis (primarily palm & soles), urticaria, rash, pruritus, hyperhidrosis, dry skin, fungal dermatitis, eczema, alopecia.\nUncommon: Bullous eruption, seborrhoea, rosacea, skin papilloma, hyperkeratosis, abnormal skin pigmentation.\nRare: Toxic epidermal necrolysis, Stevens-Johnson Syndrome, erythema multiforme, furunculosis, linear IgA bullous dermatosis (LABD), acute generalised exanthematous pustulosis (AGEP), lichenoid reactions.\nNot known: Worsening of symptoms of dermatomyositis."],
+        ["Musculoskeletal and connective tissue disorders\nCommon: Arthralgia, myalgia, back pain."],
+        ["Renal and urinary disorders\nCommon: Urinary tract infection.\nUncommon: Pyelonephritis."],
+        ["Reproductive system and breast disorders\nUncommon: Vaginitis."],
+        ["General disorders and administration site conditions\nVery common: Infusion-related reaction, pain.\nCommon: Chest pain, fatigue, fever, injection site reaction, chills, oedema.\nUncommon: Impaired healing.\nRare: Granulomatous lesion."],
+        ["Investigations\nUncommon: Autoantibody positive, weight increased1.\nRare: Complement factor abnormal."],
+        ["Injury, poisoning, and procedural complications\nNot known: Post-procedural complication (including infectious and non-infectious complications)"]
+      ]
+    },
+    {
+      "id": "remicade-el-table-1-page-16",
+      "medicine": "remicade",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e",
+      "page": 16,
+      "table_index": 0,
+      "bbox_pt": [76.0, 537.8, 521.1, 753.0],
+      "provenance": "Manual transcription of the visible Table 1 infection rows in pinned Greek SmPC page 16; checked against source text coordinates. PyMuPDF returns no table for this fragment.",
+      "rows": [
+        ["Λοιμώξεις και παρασιτώσεις\nΠολύ συχνές:\nΙογενής λοίμωξη (π.χ. γρίπη, λοίμωξη από ιό του έρπητα).\nΣυχνές:\nΒακτηριακές λοιμώξεις (π.χ. σηψαιμία, κυτταρίτιδα, απόστημα).\nΌχι συχνές:\nΦυματίωση, μυκητιασικές λοιμώξεις (π.χ. καντιντίαση, ονυχομυκητίαση).\nΣπάνιες:\nΜηνιγγίτιδα, ευκαιριακές λοιμώξεις (όπως διηθητικές μυκητιασικές λοιμώξεις [πνευμονοκύστωση, ιστοπλάσμωση, ασπεργίλλωση, κοκκιδιοειδομυκητίαση, κρυπτοκόκκωση, βλαστομυκητίαση], βακτηριακές λοιμώξεις [άτυπα μυκοβακτηρίδια, λιστερίωση, σαλμονέλλωση] και ιογενείς λοιμώξεις [κυτταρομεγαλοϊός]), παρασιτικές λοιμώξεις, επανενεργοποίηση ηπατίτιδας Β.\nΜη γνωστής συχνότητας:\nΕκ διαφυγής (breakthrough) λοίμωξη από εμβόλιο (έπειτα από έκθεση εντός της μήτρας σε infliximab)*."]
+      ]
+    },
+    {
+      "id": "remicade-el-table-1-page-17",
+      "medicine": "remicade",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e",
+      "page": 17,
+      "table_index": 0,
+      "bbox_pt": [76.0, 57.7, 517.4, 781.8],
+      "provenance": "Manual transcription of pinned Greek SmPC Table 1 continuation, page 17; source text and page coordinates confirm each SOC/frequency/reaction group. PyMuPDF returns no table.",
+      "rows": [
+        ["Νεοπλάσματα καλοήθη, κακοήθη και μη καθορισμένα (περιλαμβάνονται κύστεις και πολύποδες)\nΣπάνιες:\nΛέμφωμα, μη-Hodgkin λέμφωμα, νόσος του Hodgkin, λευχαιμία, μελάνωμα, καρκίνος τραχήλου μήτρας.\nΜη γνωστής συχνότητας:\nΗπατοσπληνικό λέμφωμα από T-κύτταρα (πρωτίστως σε εφήβους και νεαρούς ενήλικες άνδρες με νόσο του Crohn ή ελκώδη κολίτιδα), καρκίνωμα κυττάρων Merkel, Σάρκωμα Kaposi."],
+        ["Διαταραχές του αίματος και του λεμφικού συστήματος\nΣυχνές:\nΟυδετεροπενία, λευκοπενία, αναιμία, λεμφαδενοπάθεια.\nΌχι συχνές:\nΘρομβοπενία, λεμφοπενία, λεμφοκυττάρωση.\nΣπάνιες:\nΑκοκκιοκυτταραιμία (συμπεριλαμβανομένων βρεφών εκτεθειμένων εντός της μήτρας σε infliximab), θρομβωτική θρομβοπενική πορφύρα, πανκυτταροπενία, αιμολυτική αναιμία, ιδιοπαθής θρομβοπενική πορφύρα."],
+        ["Διαταραχές του ανοσοποιητικού συστήματος\nΣυχνές:\nΑλλεργικό σύμπτωμα του αναπνευστικού.\nΌχι συχνές:\nΑναφυλακτική αντίδραση, σύνδρομο προσομοιάζον με λύκο, ορονοσία ή αντίδραση προσομοιάζουσα με ορονοσία.\nΣπάνιες:\nΑναφυλακτική καταπληξία, αγγειίτιδα, αντίδραση τύπου σαρκοείδωσης."],
+        ["Μεταβολικές και διατροφικές διαταραχές\nΌχι συχνές:\nΔυσλιπιδαιμία"],
+        ["Ψυχιατρικές διαταραχές\nΣυχνές:\nΚατάθλιψη, αϋπνία.\nΌχι συχνές:\nΑμνησία, διέγερση, σύγχυση, υπνηλία, νευρικότητα.\nΣπάνιες:\nΑπάθεια."],
+        ["Διαταραχές του νευρικού συστήματος\nΠολύ συχνές:\nΚεφαλαλγία.\nΣυχνές:\nΊλιγγος, ζάλη, υπαισθησία, παραισθησία.\nΌχι συχνές:\nΣπασμός, νευροπάθεια.\nΣπάνιες:\nΕγκάρσια μυελίτιδα, απομυελινωτικές διαταραχές του κεντρικού νευρικού συστήματος (νόσος ομοιάζουσα με σκλήρυνση κατά πλάκας και οπτική νευρίτιδα), περιφερικές απομυελινωτικές διαταραχές (όπως σύνδρομο Guillain-Barré, χρόνια φλεγμονώδης απομυελινωτική πολυνευροπάθεια και πολυεστιακή κινητική νευροπάθεια).\nΜη γνωστής συχνότητας:\nΑγγειακά εγκεφαλικά επεισόδια σε στενή χρονική συσχέτιση με την έγχυση"],
+        ["Διαταραχές του οφθαλμού\nΣυχνές:\nΕπιπεφυκίτιδα.\nΌχι συχνές:\nΚερατίτιδα, περικογχικό οίδημα, κριθή.\nΣπάνιες:\nΕνδοφθαλμίτιδα.\nΜη γνωστής συχνότητας:\nΠαροδική απώλεια όρασης που εμφανίζεται κατά τη διάρκεια ή εντός 2 ωρών από την έγχυση."],
+        ["Καρδιακές διαταραχές\nΣυχνές:\nΤαχυκαρδία, αίσθημα παλμών.\nΌχι συχνές:\nΚαρδιακή ανεπάρκεια (νέα ή επιδεινωθείσα), αρρυθμία, συγκοπή, βραδυκαρδία.\nΣπάνιες:\nΚυάνωση, περικαρδιακή συλλογή.\nΜη γνωστής συχνότητας:\nΙσχαιμία του μυοκαρδίου/έμφραγμα του μυοκαρδίου."]
+      ]
+    },
+    {
+      "id": "remicade-el-table-1-page-18",
+      "medicine": "remicade",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e",
+      "page": 18,
+      "table_index": 0,
+      "bbox_pt": [76.0, 57.7, 521.2, 782.2],
+      "provenance": "Manual transcription of pinned Greek SmPC Table 1 continuation, page 18; source text and page coordinates confirm the SOC/frequency/reaction blocks. PyMuPDF returns no table.",
+      "rows": [
+        ["Αγγειακές διαταραχές\nΣυχνές:\nΥπόταση, υπέρταση, εκχύμωση, έξαψη, αιφνίδιο ερύθημα.\nΌχι συχνές:\nΠεριφερική ισχαιμία, θρομβοφλεβίτιδα, αιμάτωμα.\nΣπάνιες:\nΚυκλοφορική ανεπάρκεια, πετέχεια, αγγειόσπασμος."],
+        ["Αναπνευστικές, θωρακικές διαταραχές και διαταραχές μεσοθωρακίου\nΠολύ συχνές:\nΛοίμωξη του ανώτερου αναπνευστικού συστήματος, παραρρινοκολπίτιδα.\nΣυχνές:\nΛοίμωξη του κατώτερου αναπνευστικού συστήματος (π.χ. βρογχίτιδα, πνευμονία), δύσπνοια, επίσταξη.\nΌχι συχνές:\nΠνευμονικό οίδημα, βρογχόσπασμος, πλευρίτιδα, υπεζωκοτική συλλογή.\nΣπάνιες:\nΔιάμεση πνευμονοπάθεια (συμπεριλαμβανομένης ταχέως εξελισσόμενης νόσου, πνευμονικής ίνωσης και πνευμονίτιδας)."],
+        ["Γαστρεντερικές διαταραχές\nΠολύ συχνές:\nΚοιλιακό άλγος, ναυτία.\nΣυχνές:\nΑιμορραγία του γαστρεντερικού σωλήνα, διάρροια, δυσπεψία, γαστροοισοφαγική παλινδρόμηση, δυσκοιλιότητα.\nΌχι συχνές:\nΔιάτρηση του εντέρου, στένωση του εντέρου, εκκολπωματίτιδα, παγκρεατίτιδα, χειλίτιδα."],
+        ["Ηπατοχολικές διαταραχές\nΣυχνές:\nΗπατική λειτουργία μη φυσιολογική, τρανσαμινάσες αυξημένες.\nΌχι συχνές:\nΗπατίτιδα, ηπατοκυτταρική βλάβη, χολοκυστίτιδα.\nΣπάνιες:\nΑυτοάνοση ηπατίτιδα, ίκτερος.\nΜη γνωστής συχνότητας:\nΗπατική ανεπάρκεια."],
+        ["Διαταραχές του δέρματος και του υποδόριου ιστού\nΣυχνές:\nΝέα ή επιδεινωθείσα ψωρίαση συμπεριλαμβανομένης φλυκταινώδους ψωρίασης (πρωτίστως παλάμες και πέλματα), κνίδωση, εξάνθημα, κνησμός, υπεριδρωσία, ξηρό δέρμα, μυκητιασική δερματίτιδα, έκζεμα, αλωπεκία.\nΌχι συχνές:\nΠομφολυγώδες εξάνθημα, σμηγματόρροια, ροδόχρους ακμή, θήλωμα του δέρματος, υπερκεράτωση, μη φυσιολογική δερματική μελάγχρωση.\nΣπάνιες:\nΤοξική επιδερμική νεκρόλυση, σύνδρομο Stevens-Johnson, πολύμορφο ερύθημα, δοθιήνωση, γραμμοειδής IgA πομφολυγώδης δερμάτωση (LABD), οξεία γενικευμένη εξανθηματική φλυκταίνωση (ΟΓΕΦ), λειχηνοειδείς αντιδράσεις.\nΜη γνωστής συχνότητας:\nΕπιδείνωση συμπτωμάτων δερματομυοσίτιδας"],
+        ["Διαταραχές του μυοσκελετικού συστήματος και του συνδετικού ιστού\nΣυχνές:\nΑρθραλγία, μυαλγία, οσφυαλγία."],
+        ["Διαταραχές των νεφρών και των ουροφόρων οδών\nΣυχνές:\nΟυρολοίμωξη.\nΌχι συχνές:\nΠυελονεφρίτιδα."],
+        ["Διαταραχές του αναπαραγωγικού συστήματος και του μαστού\nΌχι συχνές:\nΚολπίτιδα."],
+        ["Γενικές διαταραχές και καταστάσεις στη θέση χορήγησης\nΠολύ συχνές:\nΑντίδραση σχετιζόμενη με την έγχυση, άλγος."]
+      ]
+    },
+    {
+      "id": "remicade-el-table-1-page-19",
+      "medicine": "remicade",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e",
+      "page": 19,
+      "table_index": 0,
+      "bbox_pt": [76.0, 57.1, 514.8, 209.8],
+      "provenance": "Manual transcription of the pinned Greek SmPC Table 1 final rows on page 19, bounded from the source page text; the first frequency group continues the SOC on page 18, and footnotes and subsequent narrative are not included.",
+      "rows": [
+        ["Συχνές:\nΘωρακικό άλγος, κόπωση, πυρετός, αντίδραση στο σημείο της ένεσης, ρίγη, οίδημα.\nΌχι συχνές:\nΚαθυστερημένη επούλωση.\nΣπάνιες:\nΚοκκιωματώδης βλάβη."],
+        ["Παρακλινικές εξετάσεις\nΌχι συχνές:\nΑυτοαντίσωμα θετικό, σωματικό βάρος αυξημένο1.\nΣπάνιες:\nΠαράγοντας συμπληρώματος μη φυσιολογικός."],
+        ["Κακώσεις, δηλητηριάσεις και επιπλοκές θεραπευτικών χειρισμών\nΜη γνωστής συχνότητας:\nΜετεγχειρητική επιπλοκή (συμπεριλαμβανομένων λοιμωδών και μη-λοιμωδών επιπλοκών)"]
+      ]
+    },
+    {
+      "id": "tysabri-el-table-1-page-13",
+      "medicine": "tysabri",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "de95da09d03b5cfb6e222a93fa714f05102a93af869e0951f263586cf0a672ff",
+      "page": 13,
+      "table_index": 0,
+      "bbox_pt": [46.656, 82.246, 563.957, 721.317],
+      "provenance": "Manual reconstruction of pinned Greek Table 1 page 13 from its rendered six-column frequency grid; PyMuPDF finds a single 14-column over-split table.",
+      "rows": [
+        ["Κατηγορία/οργανικό σύστημα σύμφωνα με τη βάση δεδομένων MedDRA", "Συχνότητα ανεπιθύμητων ενεργειών", "", "", "", ""],
+        ["", "Πολύ συχνές", "Συχνές", "Όχι συχνές", "Σπάνιες", "Μη γνωστής συχνότητας"],
+        ["Λοιμώξεις και παρασιτώσεις", "Ρινοφαρυγγίτιδα\nΟυρολοίμωξη", "Ερπητική λοίμωξη", "Προϊούσα πολυεστιακή λευκοεγκεφαλοπάθεια", "Έρπης οφθαλμικός", "Μηνιγγοεγκεφαλίτιδα ερπητική\nJCV νευρωνοπάθεια των κοκκιωδών κυττάρων\nΝεκρωτική ερπητική αμφιβληστροειδοπάθεια"],
+        ["Διαταραχές του αίματος και του λεμφικού συστήματος", "", "Αναιμία", "Θρομβοπενία, Αυτοάνοση θρομβοπενική πορφύρα (ITP), Ηωσινοφιλία", "Αιμολυτική αναιμία\nΕμπύρηνα ερυθροκύτταρα", ""],
+        ["Διαταραχές του ανοσοποιητικού συστήματος", "", "Υπερευαισθησία", "Αναφυλακτική αντίδραση\nΦλεγμονώδες σύνδρομο ανοσολογικής αποκατάστασης", "", ""],
+        ["Διαταραχές του νευρικού συστήματος", "Ζάλη\nΚεφαλαλγία", "", "", "", ""],
+        ["Αγγειακές διαταραχές", "", "Έξαψη", "", "", ""],
+        ["Αναπνευστικές, θωρακικές διαταραχές και διαταραχές μεσοθωρακίου", "", "Δύσπνοια", "", "", ""],
+        ["Γαστρεντερικές διαταραχές", "Ναυτία", "Έμετος", "", "", ""],
+        ["Ηπατοχολικές διαταραχές", "", "", "", "Υπερχολερυθριναιμία", "Ηπατική βλάβη"],
+        ["Διαταραχές του δέρματος και του υποδόριου ιστού", "", "Κνησμός\nΕξάνθημα\nΚνίδωση", "", "Αγγειοοίδημα", ""],
+        ["Διαταραχές του μυοσκελετικού συστήματος και του συνδετικού ιστού", "Αρθραλγία", "", "", "", ""],
+        ["Γενικές διαταραχές και καταστάσεις στη θέση χορήγησης", "Κόπωση", "Πυρεξία\nΡίγη\nΑντίδραση της θέσης έγχυσης\nΑντίδραση της θέσης ένεσης", "Οίδημα προσώπου", "", ""]
+      ]
+    },
+    {
+      "id": "tysabri-el-table-1-page-14",
+      "medicine": "tysabri",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "de95da09d03b5cfb6e222a93fa714f05102a93af869e0951f263586cf0a672ff",
+      "page": 14,
+      "table_index": 0,
+      "bbox_pt": [46.594, 56.975, 563.988, 277.507],
+      "provenance": "Manual reconstruction of pinned Greek Table 1 continuation on page 14 from its repeated six-column frequency header and ruled source rows; PyMuPDF over-splits this page into 12 columns.",
+      "rows": [
+        ["Κατηγορία/οργανικό σύστημα σύμφωνα με τη βάση δεδομένων MedDRA", "Συχνότητα ανεπιθύμητων ενεργειών", "", "", "", ""],
+        ["", "Πολύ συχνές", "Συχνές", "Όχι συχνές", "Σπάνιες", "Μη γνωστής συχνότητας"],
+        ["Διερευνήσεις", "", "Αύξηση ηπατικών ενζύμων\nΕιδικό αντίσωμα κατά φαρμάκου θετικό", "", "", ""],
+        ["Κακώσεις, δηλητηριάσεις και επιπλοκές θεραπευτικών χειρισμών", "Αντίδραση σχετιζόμενη με την έγχυση", "", "", "", ""]
+      ]
+    },
+    {
+      "id": "tagrisso-el-table-2-page-12",
+      "medicine": "tagrisso",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "d1d1a9913bf56d8bf32fe0e1f35d812fdc03ea656729da31bd4a258b30ddd1f9",
+      "page": 12,
+      "table_index": 0,
+      "bbox_pt": [65.53, 336.59, 530.05, 764.28],
+      "provenance": "Full manual transcription checked against the rendered pinned PDF page and its source text. Ruled source bands at x=65.54, 156.02, 255.29, 326.11, 432.58, and 530.04 pt establish five physical columns; PyMuPDF splits the page-12 table into seven. Frequency associations below are transcribed from the two all-grade frequency columns, not from Rust output; CTCAE grade-3-or-higher percentages are not frequency categories.",
+      "rows": [
+        ["Κατηγορία/Οργανικό Σύστημα κατά MedDRA", "TAGRISSOα", "", "TAGRISSO με πεμετρεξίδη και χημειοθεραπεία με βάση την πλατίνηβ", ""],
+        ["", "Όρος ευρετηρίου CIOMS / συνολική συχνότητα (όλοι οι βαθμοί κατά CTCAE)γ", "Συχνότητα βαθμού 3 ή υψηλότερου κατά CTCAEγ", "Όρος ευρετηρίου CIOMS / συνολική συχνότητα (όλοι οι βαθμοί κατά CTCAE)γ", "Συχνότητα βαθμού 3 ή υψηλότερου κατά CTCAEγ"],
+        ["Λοιμώξεις και παρασιτώσεις", "", "", "", ""],
+        ["Επανενεργοποίηση ηπατίτιδας Βδ", "Μη γνωστής συχνότητας", "", "0%", "0%"],
+        ["Διαταραχές του αίματος και του λεμφικού συστήματος", "", "", "", ""],
+        ["Απλαστική αναιμία", "Σπάνια (0,05%)", "0,05%", "0%", "0%"],
+        ["Θρομβοπενία", "Συχνή (7%)", "0,6%", "Πολύ συχνή (18,5%)", "6,9%"],
+        ["Ουδετεροπενία", "Συχνή (6%)", "0,9%", "Πολύ συχνή (24,6%)", "13,4%"],
+        ["Λευκοπενία", "Συχνή (5%)", "0,4%", "Πολύ συχνή (12,7%)", "2,9%"],
+        ["Λεμφοπενία", "Συχνή (1,6%)", "0,3%", "Συχνή (2,5%)", "1,1%"],
+        ["Μεταβολικές και διατροφικές διαταραχές", "", "", "", ""],
+        ["Μειωμένη όρεξη", "Πολύ συχνή (19%)", "1,1%", "Πολύ συχνή (31%)", "2,9%"],
+        ["Διαταραχές του οφθαλμού", "", "", "", ""],
+        ["Κερατίτιδαε", "Όχι συχνή (0,6%)", "0,05%", "Όχι συχνή (0,7%)", "0%"],
+        ["Καρδιακές διαταραχές", "", "", "", ""],
+        ["Καρδιακή ανεπάρκεια", "Όχι συχνή (0,5%)", "0,2%", "Συχνή (1,8%)", "1,1%στ"],
+        ["Αναπνευστικές, θωρακικές διαταραχές και διαταραχές μεσοθωρακίου", "", "", "", ""]
+      ],
+      "source_frequency_associations": [
+        {"reaction": "Επανενεργοποίηση ηπατίτιδας Βδ", "frequency": "Μη γνωστής συχνότητας", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Απλαστική αναιμία", "frequency": "Σπάνια", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Θρομβοπενία", "frequency": "Συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Θρομβοπενία", "frequency": "Πολύ συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Ουδετεροπενία", "frequency": "Συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Ουδετεροπενία", "frequency": "Πολύ συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Λευκοπενία", "frequency": "Συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Λευκοπενία", "frequency": "Πολύ συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Λεμφοπενία", "frequency": "Συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Λεμφοπενία", "frequency": "Συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Μειωμένη όρεξη", "frequency": "Πολύ συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Μειωμένη όρεξη", "frequency": "Πολύ συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Κερατίτιδαε", "frequency": "Όχι συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Κερατίτιδαε", "frequency": "Όχι συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"},
+        {"reaction": "Καρδιακή ανεπάρκεια", "frequency": "Όχι συχνή", "source": "Table 2, page 12, TAGRISSO monotherapy all-grade frequency column"},
+        {"reaction": "Καρδιακή ανεπάρκεια", "frequency": "Συχνή", "source": "Table 2, page 12, combination-treatment all-grade frequency column"}
+      ]
+    }
+  ],
+  "reference_adjudications": [
+    {
+      "medicine": "lyrica",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "b911bddbab432f8a0fcedb9c67537bff55e0bf53d314c31c88869bca834605af",
+      "provenance": "The pinned English Table 2 has separate frequency and reaction columns on pages 10–11; PyMuPDF merges their text and intervening SOC headings into one cell per page.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [
+        {"page": 10, "table_index": 0, "reason": "The two source columns and SOC headings are merged into a single cell."},
+        {"page": 11, "table_index": 0, "reason": "The two source columns and SOC headings are merged into a single cell."}
+      ],
+      "fixture_ids": ["lyrica-en-table-2-page-10", "lyrica-en-table-2-page-11"]
+    },
+    {
+      "medicine": "lyrica",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "14600bfc30cc794a2533be8a3bfe04663fdfb9607ccee0eed3a53de9eb773b0c",
+      "provenance": "Manual source-table reconstruction for borderless Table 2; no PyMuPDF table detections exist on pages 11–12.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [],
+      "fixture_ids": ["lyrica-el-table-2-page-11", "lyrica-el-table-2-page-12"]
+    },
+    {
+      "medicine": "stelara",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6a0c49632e19ff1155ec52b57eff985c2b5fe19c1a8b9a5771ebf66d9d2755b7",
+      "provenance": "Manual source reconstruction of borderless Table 4 on pages 8–9; PyMuPDF detects no adverse-reaction table.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [],
+      "fixture_ids": ["stelara-en-table-4-page-8", "stelara-en-table-4-page-9"]
+    },
+    {
+      "medicine": "ocrevus",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6b0d6110438994b797b8a98f00722dd926d4ce7ddf6922009fcf45cecda87372",
+      "provenance": "Page 12 rendered source shows a four-column Table 2; PyMuPDF splits it into a malformed 27-row, ten-column detection, a one-row fragment, and a page-15 footnote fragment.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [
+        {"page": 12, "table_index": 0, "reason": "Malformed split/merged extraction does not preserve the source table's four columns."},
+        {"page": 12, "table_index": 1, "reason": "One-row fragment of the same malformed Table 2 extraction."},
+        {"page": 15, "table_index": 0, "reason": "Footnote/body fragment, not an adverse-reaction table."}
+      ],
+      "fixture_ids": ["ocrevus-en-table-2-page-12"]
+    },
+    {
+      "medicine": "rybelsus",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "aa5dfee3f8a99257e70335cda5cdb13887a8b084cf6733add8d87ff1138fecdc",
+      "provenance": "The pinned Greek source has a six-frequency-column Table 1 split across pages 8–9; source cells were transcribed from its rendered grid, not Rust output.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [
+        {"page": 8, "table_index": 0, "reason": "Malformed page fragment with split frequency headers and clipped cells; replaced by source-cell fixture."},
+        {"page": 9, "table_index": 0, "reason": "Malformed continuation with fragmented frequency columns; replaced by source-cell fixture."},
+        {"page": 11, "table_index": 0, "reason": "Footer text fragment, not an adverse-reaction table."}
+      ],
+      "fixture_ids": ["rybelsus-el-table-1-page-8", "rybelsus-el-table-1-page-9"]
+    },
+    {
+      "medicine": "remicade",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "3fe5ec643ebd8b47f3d2adf8a19ade1224c614e70c07c2d563b0cf68054693ab",
+      "provenance": "Pinned page 15 source contains a continuation absent from PyMuPDF tables; page 16 has a spurious leading empty column only in its last SOC block. The unrelated raw Python table on page 20 is retained.",
+      "retain_pymupdf_tables": [
+        {"page": 20, "table_index": 0}
+      ],
+      "exclude_pymupdf_tables": [
+        {"page": 16, "table_index": 0, "reason": "The last source SOC/frequency block is misassigned to a spurious second column; the source page fixture preserves all blocks."}
+      ],
+      "fixture_ids": ["remicade-en-table-1-page-15", "remicade-en-table-1-page-16"]
+    },
+    {
+      "medicine": "remicade",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "72595b97a8dffcc846218935c8929cb23f68152b40909890eddea329373dd55e",
+      "provenance": "Pinned Greek Table 1 continues on pages 16–19 as SOC/frequency/reaction text; the page-22/23 numeric ALT tables are separately retained.",
+      "retain_pymupdf_tables": [
+        {"page": 22, "table_index": 0},
+        {"page": 23, "table_index": 0}
+      ],
+      "exclude_pymupdf_tables": [],
+      "fixture_ids": [
+        "remicade-el-table-1-page-16",
+        "remicade-el-table-1-page-17",
+        "remicade-el-table-1-page-18",
+        "remicade-el-table-1-page-19"
+      ]
+    },
+    {
+      "medicine": "dupixent",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "03cfef0820960157937161ad51a96760d9bff76c2f23c8cca9d5128db312db79",
+      "provenance": "Pinned page 11 contains Table 8; the page-14 PyMuPDF hit is a paragraph fragment, not a table.",
+      "retain_pymupdf_tables": [{"page": 11, "table_index": 0}],
+      "exclude_pymupdf_tables": [
+        {"page": 14, "table_index": 0, "reason": "Paragraph text fragment, not a table."}
+      ],
+      "fixture_ids": []
+    },
+    {
+      "medicine": "keytruda",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "e087d75948ee6d7e0436cc4d9426ed91824e992a89f4481a4ea0ddb3e3ee3588",
+      "provenance": "Pinned source Table 2 spans pages 17–20; the page-25 hit is a footer fragment.",
+      "retain_pymupdf_tables": [
+        {"page": 17, "table_index": 0},
+        {"page": 18, "table_index": 0},
+        {"page": 19, "table_index": 0},
+        {"page": 20, "table_index": 0}
+      ],
+      "exclude_pymupdf_tables": [
+        {"page": 25, "table_index": 0, "reason": "Footer fragment, not an adverse-reaction table."}
+      ],
+      "fixture_ids": []
+    },
+    {
+      "medicine": "comirnaty",
+      "language": "en",
+      "section": "4.8",
+      "source_pdf_sha256": "6b1fcd6e0ff3b5c1ffd59f9dd3286f1609cca5902765a0cf59830512428fefdc",
+      "provenance": "Pinned page 11 contains Table 2; page-7–9 PyMuPDF hits are narrative section text fragments and are excluded only after source review.",
+      "retain_pymupdf_tables": [{"page": 11, "table_index": 0}],
+      "exclude_pymupdf_tables": [
+        {"page": 7, "table_index": 0, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 7, "table_index": 1, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 7, "table_index": 2, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 8, "table_index": 0, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 8, "table_index": 1, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 8, "table_index": 2, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 9, "table_index": 0, "reason": "Narrative section text fragment, not a source table."},
+        {"page": 9, "table_index": 1, "reason": "Narrative section text fragment, not a source table."}
+      ],
+      "fixture_ids": []
+    },
+    {
+      "medicine": "tysabri",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "de95da09d03b5cfb6e222a93fa714f05102a93af869e0951f263586cf0a672ff",
+      "provenance": "Pinned Table 1 continues on pages 13–14; manually transcribed six-column grid fixtures replace PyMuPDF's over-split 14- and 12-column detections, while the page-16 detection is a footer fragment.",
+      "retain_pymupdf_tables": [],
+      "exclude_pymupdf_tables": [
+        {"page": 13, "table_index": 0, "reason": "PyMuPDF over-splits the source's six columns into fourteen."},
+        {"page": 14, "table_index": 0, "reason": "PyMuPDF over-splits the source's six columns into twelve."},
+        {"page": 16, "table_index": 0, "reason": "Footer fragment, not a table."}
+      ],
+      "fixture_ids": ["tysabri-el-table-1-page-13", "tysabri-el-table-1-page-14"]
+    },
+    {
+      "medicine": "nubeqa",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "b30028a870b21768a676dd5b88c1193e8a8a8fe0f27fc511be27328a3741cf0d",
+      "provenance": "Pinned source Table 1 and Table 2 are on pages 8 and 9; page 12 is a footer text fragment.",
+      "retain_pymupdf_tables": [
+        {"page": 8, "table_index": 0},
+        {"page": 9, "table_index": 0}
+      ],
+      "exclude_pymupdf_tables": [
+        {"page": 12, "table_index": 0, "reason": "Footer text fragment, not a table."}
+      ],
+      "fixture_ids": []
+    },
+    {
+      "medicine": "tagrisso",
+      "language": "el",
+      "section": "4.8",
+      "source_pdf_sha256": "d1d1a9913bf56d8bf32fe0e1f35d812fdc03ea656729da31bd4a258b30ddd1f9",
+      "provenance": "Pinned Table 2 page 12 is transcribed from the rendered source as a five-column grid; its malformed seven-column PyMuPDF extraction is excluded. The aligned source tables on pages 13 and 14 retain their raw PyMuPDF references.",
+      "retain_pymupdf_tables": [
+        {"page": 13, "table_index": 0},
+        {"page": 14, "table_index": 0}
+      ],
+      "exclude_pymupdf_tables": [
+        {"page": 12, "table_index": 0, "reason": "The rendered source has five ruled columns; PyMuPDF over-splits the page-12 table into seven, merging frequency labels with incorrect cells."}
+      ],
+      "fixture_ids": ["tagrisso-el-table-2-page-12"]
+    }
+  ]
+}

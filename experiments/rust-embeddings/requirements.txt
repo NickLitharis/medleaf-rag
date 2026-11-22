@@ -1,0 +1,9 @@
+--index-url https://pypi.org/simple
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+numpy==2.3.2
+sentence-transformers==5.1.0
+tokenizers==0.22.1
+torch==2.8.0+cpu
+transformers==4.56.1
+huggingface-hub==0.34.4

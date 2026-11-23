@@ -1,6 +1,9 @@
 """k-means vs e-means on the E5 chunk vectors, scored with the project's Recall@5.
 
 Usage: python experiment.py KAGGLE_OUTPUT_DIR
+Purity (what each cluster is made of) is reported for medicine, document kind, section and
+language; it is not a retrieval score, and it rises with k, so compare the methods at the
+same k only.
 Scoring is dense-only (no sparse channel, no RRF), so its Recall@5 is not comparable with
 eval/baseline.json; it compares the clustering methods with each other.
 The settings below are fixed before seeing results (see PLAN.md); do not tune them
@@ -13,6 +16,7 @@ dead-cluster revival, k-means++ start for both methods.
 import json
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -84,6 +88,26 @@ def recall_at_5(queries, qvecs, vectors, chunk_ids, allowed=None):
     return score(ranks)["recall_at_5"]["hits"]
 
 
+def purity(cluster_of, labels):
+    """Share of chunks that carry their cluster's most common label (1.0 = every cluster
+    holds a single label). Compare it with the share of the largest label overall."""
+    _, label_codes = np.unique(labels, return_inverse=True)
+    counts = np.zeros((cluster_of.max() + 1, label_codes.max() + 1), dtype=int)
+    np.add.at(counts, (cluster_of, label_codes), 1)
+    return round(float(counts.max(1).sum() / len(labels)), 4)
+
+
+def chunk_labels(rows):
+    """What each chunk is: medicine, document kind, section across medicines, language."""
+    parts = [row["chunk_id"].split("#")[0].split(":") for row in rows]
+    return {
+        "medicine": [p[0] for p in parts],
+        "doc": [p[1] for p in parts],
+        "section": [f"{p[1]}:{p[2]}" for p in parts],
+        "lang": [row["lang"] for row in rows],
+    }
+
+
 def read_jsonl(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line]
 
@@ -92,12 +116,16 @@ def main(folder):
     folder = Path(folder)
     vectors = np.load(folder / "vectors.npy")
     qvecs = np.load(folder / "query_vectors.npy")
-    chunk_ids = [row["chunk_id"] for row in read_jsonl(folder / "chunks.jsonl")]
+    chunk_rows = read_jsonl(folder / "chunks.jsonl")
+    chunk_ids = [row["chunk_id"] for row in chunk_rows]
+    labels_of = chunk_labels(chunk_rows)
+    majority = {name: round(max(Counter(v).values()) / len(v), 4) for name, v in labels_of.items()}
     queries = read_jsonl(folder / "queries.jsonl")
     k = round(len(vectors) ** 0.5)
     baseline = recall_at_5(queries, qvecs, vectors, chunk_ids)
     print(f"{len(vectors)} chunks, {len(queries)} questions, k={k}; "
           f"exhaustive Recall@5 = {baseline}/{len(queries)}")
+    print("purity if every chunk were put in the largest label's group:", majority)
 
     rows = []
     for name, fit in (("kmeans", kmeans), ("emeans", emeans)):
@@ -108,6 +136,8 @@ def main(folder):
             labels, dist = nearest(vectors, centers)
             row = {"method": name, "seed": seed, "seconds": round(seconds, 1),
                    "mse": round(float(dist.mean()), 4)}
+            for name_, values in labels_of.items():
+                row[f"purity_{name_}"] = purity(labels, values)
             # Nearest clusters by L2: argmin |q-c|^2 = argmax q.c - |c|^2/2.
             affinity = qvecs @ centers.T - (centers**2).sum(1)[None, :] / 2
             for p in NPROBES:
@@ -119,7 +149,8 @@ def main(folder):
                 )
             rows.append(row)
             print(row, flush=True)
-    result = {"baseline": baseline, "questions": len(queries), "k": k, "rows": rows}
+    result = {"baseline": baseline, "questions": len(queries), "k": k,
+              "largest_label_share": majority, "rows": rows}
     (folder / "results.json").write_text(json.dumps(result, indent=1))
     print("wrote", folder / "results.json")
 

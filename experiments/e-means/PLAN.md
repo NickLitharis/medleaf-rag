@@ -20,6 +20,10 @@ as often as k-means, and is it faster or tighter?
    (3 seeds each), route each question to its nearest 1, 4 or 8 clusters, and score with
    the project's own `Recall@5` (`medleaf.eval.metrics`). The exhaustive search over all
    chunks is the reference.
+   It also reports cluster purity: the share of chunks that carry their cluster's most
+   common label, for medicine, document kind (SmPC or leaflet), section and language. This
+   shows what each method grouped together. Purity rises with k, so compare the methods at
+   the same k, and read it against the share of the largest label overall (also reported).
 
 ## Settings (fixed before seeing results)
 

@@ -1,21 +1,18 @@
-"""``medleaf`` command line: resolve, download, parse, index and search.
+"""``medleaf`` command line: resolve, download, check and inspect the EMA corpus.
 
 Commands are deliberately small and composable; each prints a summary that is safe to
-paste into a PR, and exits non-zero when a real problem is found. Retrieval commands
-import their heavy dependencies (Qdrant client, torch) only inside the command, so
-`medleaf check` keeps working without them.
+paste into a PR, and exits non-zero when a real problem is found. Embedding and the
+clustering comparison live in ``experiments/e-means``.
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from pydantic import HttpUrl
 
@@ -28,11 +25,6 @@ from medleaf.ingest.pipeline import parse_pdf
 from medleaf.ingest.store import dump_medicines, load_medicines, slugify, upsert_medicine
 from medleaf.models import DocKind, DocumentRef, Lang, Medicine
 from medleaf.sections import LEAFLET_REQUIRED, SMPC_REQUIRED
-
-if TYPE_CHECKING:  # imported lazily so non-retrieval commands work without them
-    from qdrant_client import QdrantClient
-
-    from medleaf.retrieval.embed import Encoder
 
 #: Concurrent EMA downloads. Small on purpose: EMA rate-limits bursts with HTTP 429.
 DEFAULT_DOWNLOAD_WORKERS = 2
@@ -379,247 +371,20 @@ def _cmd_tables(args: argparse.Namespace, settings: Settings) -> int:
     return 0 if have_rows == printed and printed else 1
 
 
-def _qdrant_client(settings: Settings) -> QdrantClient:
-    """Create a Qdrant client, failing with a clear message rather than an import error."""
-    from qdrant_client import QdrantClient
-
-    return QdrantClient(
-        url=settings.qdrant_url,
-        api_key=settings.qdrant_api_key,
-        timeout=int(settings.request_timeout_s),
-    )
 
 
-def _encoder_or_none(settings: Settings) -> Encoder | None:
-    """Load the pinned embedding model, printing a clear error when it is unavailable."""
-    from medleaf.retrieval.embed import E5Encoder, EncoderError
-
-    try:
-        encoder = E5Encoder.load(
-            model_id=settings.embed_model,
-            revision=settings.embed_revision,
-            device=settings.embed_device,
-            batch_size=settings.embed_batch_size,
-            max_seq_length=settings.embed_max_seq_length,
-            cache_dir=settings.embed_cache_dir,
-        )
-    except EncoderError as error:
-        print(f"embedding model unavailable: {error}", file=sys.stderr)
-        return None
-    print(
-        f"model {encoder.model_id}@{encoder.revision} loaded (dim {encoder.dimension})",
-        file=sys.stderr,
-    )
-    return encoder
 
 
-def _cmd_index_build(args: argparse.Namespace, settings: Settings) -> int:
-    """Parse the corpus, embed every chunk and upsert it into Qdrant."""
-    from medleaf.retrieval.pipeline import IndexBuildError, build_index
-
-    encoder = _encoder_or_none(settings)
-    if encoder is None:
-        return 2
-
-    client = _qdrant_client(settings)
-    try:
-        client.get_collections()
-    except Exception as error:
-        print(f"Qdrant unavailable at {settings.qdrant_url}: {error}", file=sys.stderr)
-        return 2
-
-    try:
-        manifest = build_index(
-            settings=settings,
-            client=client,
-            encoder=encoder,
-            only=args.only or None,
-            recreate=not args.no_recreate,
-            reuse_cache=not args.no_cache,
-            allow_missing=args.allow_missing,
-            allow_checksum_mismatch=args.allow_checksum_mismatch,
-        )
-    except IndexBuildError as error:
-        print(f"index build failed: {error}", file=sys.stderr)
-        return 1
-    print(
-        f"built {manifest.total_chunks} chunks across {len(manifest.chunk_counts)} "
-        f"medicine-language pairs; corpus_version={manifest.corpus_version}; "
-        f"missing={manifest.missing}"
-    )
-    return 0
 
 
-def _cmd_index_window_report(args: argparse.Namespace, settings: Settings) -> int:
-    """Measure every indexed chunk against the model window (no re-embedding)."""
-    from medleaf.retrieval.pipeline import window_report
-
-    encoder = _encoder_or_none(settings)
-    if encoder is None:
-        return 2
-    client = _qdrant_client(settings)
-    try:
-        client.get_collections()
-    except Exception as error:
-        print(f"Qdrant unavailable at {settings.qdrant_url}: {error}", file=sys.stderr)
-        return 2
-    report = window_report(
-        settings=settings, client=client, encoder=encoder, worst_limit=args.worst
-    )
-    if args.json:
-        print(
-            json.dumps(
-                {
-                    "collection": report.collection,
-                    "points": report.total_points,
-                    "over_window": report.over_window,
-                    "clean": report.clean,
-                    "limit_tokens": report.limit_tokens,
-                    "by_medicine": report.by_medicine,
-                    "worst": [
-                        {"chunk_id": chunk_id, "tokens": count}
-                        for chunk_id, count in report.worst
-                    ],
-                },
-                indent=2,
-            )
-        )
-        return 0 if report.clean else 1
-    print(
-        f"collection={report.collection} points={report.total_points} "
-        f"over_window={report.over_window} limit_tokens={report.limit_tokens}"
-    )
-    for chunk_id, count in report.worst:
-        print(f"  worst: {count:5} tokens  {chunk_id}")
-    if report.by_medicine:
-        print(f"  medicines with over-window chunks: {report.by_medicine}")
-    return 0 if report.clean else 1
 
 
-def _cmd_index_status(args: argparse.Namespace, settings: Settings) -> int:
-    """Report the index manifest and the live readiness probe."""
-    from medleaf.retrieval.index import IndexMissingError
-    from medleaf.retrieval.service import RetrievalService
-
-    service = RetrievalService(settings)
-    try:
-        manifest = service.manifest()
-    except IndexMissingError as error:
-        print(f"index missing: {error}", file=sys.stderr)
-        return 1
-    print(manifest.model_dump_json(indent=2))
-    state = service.ready()
-    print(f"ready={state.ready}: {state.detail}")
-    return 0 if state.ready else 1
 
 
-def _cmd_search(args: argparse.Namespace, settings: Settings) -> int:
-    """Run hybrid retrieval from the command line (same path as ``/v1/search``)."""
-    from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
-    from medleaf.retrieval.service import RetrievalService
-
-    service = RetrievalService(settings)
-    try:
-        response = service.search(
-            args.query,
-            lang=args.lang,
-            medicine=args.medicine or None,
-            doc=args.doc,
-            active_substance=args.active_substance,
-            corpus_version=args.corpus_version,
-            limit=args.limit,
-        )
-    except (IndexMissingError, RetrievalUnavailableError) as error:
-        print(f"search unavailable: {error}", file=sys.stderr)
-        return 2
-
-    if args.json:
-        print(response.model_dump_json(indent=2))
-        return 0
-    print(
-        f"query={response.query!r} lang={response.lang} corpus_version={response.corpus_version} "
-        f"count={response.count} latency_ms={response.latency_ms}"
-    )
-    for hit in response.results:
-        snippet = " ".join(hit.text.split())[:160]
-        substance = hit.active_substance or "substance: unavailable"
-        print(
-            f"{hit.rank:2}. {hit.score:.4f} {hit.chunk_id} [{hit.lang}/{hit.doc}] "
-            f"{substance} ({hit.atc_code or 'atc: unavailable'}) {snippet}"
-        )
-        print(f"    source: {hit.source_url} (revision {hit.revision_date})")
-    return 0
 
 
-def _cmd_eval(args: argparse.Namespace, settings: Settings) -> int:
-    """Score one split, write the result file and optionally gate it on a baseline."""
-    from medleaf.eval.runner import TOP_K, evaluate, gate, load_questions, write_result
-    from medleaf.retrieval.index import IndexMissingError, RetrievalUnavailableError
-    from medleaf.retrieval.service import RetrievalService
-
-    service = RetrievalService(settings)
-
-    def search(query: str) -> list[str]:
-        return [hit.chunk_id for hit in service.search(query, limit=TOP_K).results]
-
-    questions = load_questions(args.dataset, args.split)
-    try:
-        result = evaluate(questions, search)
-    except (IndexMissingError, RetrievalUnavailableError) as error:
-        print(f"eval aborted, retrieval unavailable: {error}", file=sys.stderr)
-        return 2
-    manifest = service.manifest()
-    result = {
-        "split": args.split,
-        "dataset": args.dataset.as_posix(),
-        "corpus_version": manifest.corpus_version,
-        "embed_model": f"{manifest.embed_model}@{manifest.embed_revision}",
-        **result,
-    }
-    path = write_result(result, args.out, args.split)
-    overall = result["overall"]
-    print(
-        f"{args.split}: Recall@5 {overall['recall_at_5']['hits']}/{overall['total']} "
-        f"({overall['recall_at_5']['rate']:.2%}), Recall@10 "
-        f"{overall['recall_at_10']['hits']}/{overall['total']}, MRR@10 {overall['mrr_at_10']}"
-    )
-    for lang, row in result["by_lang"].items():
-        print(f"  {lang}: Recall@5 {row['recall_at_5']['hits']}/{row['total']}")
-    print(f"result: {path}")
-    if args.baseline is None:
-        return 0
-    failures = gate(result, json.loads(args.baseline.read_text(encoding="utf-8")))
-    for failure in failures:
-        print(f"GATE FAILED: {failure}", file=sys.stderr)
-    if not failures:
-        print(f"gate passed against {args.baseline}")
-    return 1 if failures else 0
 
 
-def _cmd_index_annotate(args: argparse.Namespace, settings: Settings) -> int:
-    """Attach SPEC section 8 payload metadata to an existing index.
-
-    Payload-only: the vectors are left alone, so enriching metadata never triggers a
-    re-embed of an otherwise correct index.
-    """
-    from medleaf.retrieval.pipeline import IndexBuildError, annotate_manifest_metadata
-
-    client = _qdrant_client(settings)
-    try:
-        client.get_collections()
-    except Exception as error:
-        print(f"Qdrant unavailable at {settings.qdrant_url}: {error}", file=sys.stderr)
-        return 2
-    try:
-        updated = annotate_manifest_metadata(settings=settings, client=client)
-    except IndexBuildError as error:
-        print(f"metadata annotate failed: {error}", file=sys.stderr)
-        return 1
-    print(
-        f"updated metadata for {len(updated)} medicines "
-        f"({sum(updated.values())} points updated in payload only)"
-    )
-    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -673,62 +438,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     tables.set_defaults(func=_cmd_tables)
 
-    index = subparsers.add_parser("index", help="build and inspect the Qdrant index")
-    index_sub = index.add_subparsers(dest="index_command", required=True)
-    index_build = index_sub.add_parser("build", help="parse, embed and upsert the corpus")
-    index_build.add_argument("--only", nargs="*", default=[], help="limit to these medicine slugs")
-    index_build.add_argument("--no-cache", action="store_true", help="re-parse every PDF")
-    index_build.add_argument(
-        "--no-recreate", action="store_true", help="upsert into the existing collection"
-    )
-    index_build.add_argument(
-        "--allow-missing",
-        action="store_true",
-        help="record missing PDFs in the manifest instead of aborting",
-    )
-    index_build.add_argument(
-        "--allow-checksum-mismatch",
-        action="store_true",
-        help="index PDFs whose SHA-256 does not match the pin in data/medicines.yaml",
-    )
-    index_build.set_defaults(func=_cmd_index_build)
-    index_status = index_sub.add_parser("status", help="print the index manifest and readiness")
-    index_status.set_defaults(func=_cmd_index_status)
-    index_sub.add_parser(
-        "annotate",
-        help="attach chunk metadata to an existing index (payload only, no re-embed)",
-    ).set_defaults(func=_cmd_index_annotate)
-    index_window = index_sub.add_parser(
-        "window-report",
-        help="measure indexed chunks against the model window (no re-embed)",
-    )
-    index_window.add_argument("--worst", type=int, default=10, help="worst offenders to list")
-    index_window.add_argument("--json", action="store_true", help="print machine-readable output")
-    index_window.set_defaults(func=_cmd_index_window_report)
-
-    search = subparsers.add_parser("search", help="hybrid search over the built index")
-    search.add_argument("query", help="question or keyword phrase")
-    search.add_argument("--lang", choices=["en", "el"], default=None, help="corpus language")
-    search.add_argument("--medicine", nargs="*", default=[], help="medicine slug filter")
-    search.add_argument("--doc", choices=["smpc", "leaflet"], default=None, help="document filter")
-    search.add_argument(
-        "--active-substance", default=None, help="filter chunks by active substance"
-    )
-    search.add_argument("--corpus-version", default=None, help="exact corpus version filter")
-    search.add_argument("--limit", type=int, default=10, help="number of chunks to return")
-    search.add_argument("--json", action="store_true", help="print the full JSON response")
-    search.set_defaults(func=_cmd_search)
-
-    evaluate = subparsers.add_parser("eval", help="retrieval eval on a split (SPEC §11)")
-    evaluate.add_argument("--split", choices=["dev", "test"], required=True)
-    evaluate.add_argument(
-        "--dataset", type=Path, default=Path("eval/datasets/retrieval-v1.jsonl")
-    )
-    evaluate.add_argument("--out", type=Path, default=Path("eval/results"))
-    evaluate.add_argument(
-        "--baseline", type=Path, help="fail (exit 1) if Recall@5 regresses against this file"
-    )
-    evaluate.set_defaults(func=_cmd_eval)
     return parser
 
 

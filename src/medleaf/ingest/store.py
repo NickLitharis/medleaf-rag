@@ -6,6 +6,7 @@ revision dates and a SHA-256 per downloaded file (SPEC sections 5 and 8).
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 
 import yaml
@@ -56,6 +57,16 @@ def upsert_medicine(medicines: list[Medicine], medicine: Medicine) -> list[Medic
     return medicines
 
 
+def corpus_sha256(medicines_file: Path) -> str:
+    """Hash the corpus definition; it identifies the corpus version."""
+    return hashlib.sha256(medicines_file.read_bytes()).hexdigest()
+
+
+def corpus_version_for(medicines_file: Path) -> str:
+    """Human-readable corpus version derived from the definition's contents."""
+    return f"medicines.yaml:{corpus_sha256(medicines_file)[:12]}"
+
+
 def slugify(name: str) -> str:
     """Turn an EMA brand name into a stable file-friendly slug."""
     cleaned = name.lower()
@@ -70,6 +81,8 @@ __all__ = [
     "DocumentRef",
     "Lang",
     "Medicine",
+    "corpus_sha256",
+    "corpus_version_for",
     "dump_medicines",
     "load_medicines",
     "slugify",

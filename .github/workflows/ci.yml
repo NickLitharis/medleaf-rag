@@ -34,9 +34,8 @@ jobs:
 
   # The real EMA PDFs are not committed (data/raw/ is ignored), so the corpus is an
   # explicit, network-dependent opt-in. It is never run on push or pull_request, and
-  # this job downloads the assets before it can claim they passed. The M2 index build
-  # is deliberately not run here: it needs torch and a Qdrant service, and is verified
-  # locally (see docs/M2-acceptance.md) rather than on every dispatch.
+  # this job downloads the assets before it can claim they passed. Embedding needs torch
+  # and a GPU for reasonable speed, so it runs on Kaggle (experiments/e-means), not here.
   corpus:
     name: EMA corpus acceptance (opt-in, network)
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_corpus }}

@@ -40,9 +40,9 @@ small difference is noise; the results file shows all seeds.
 ```
 # on Kaggle (from kaggle/full-corpus/), then download the output
 kaggle kernels push -p . --accelerator NvidiaTeslaT4
-kaggle kernels output nikoslitharis/medleaf-embed-corpus -p OUT
+kaggle kernels output nikoslitharis/medleaf-embed-corpus -p ../../out
 # locally
-python experiment.py OUT        # writes OUT/results.json
+python experiment.py out        # from experiments/e-means; writes out/results.json
 ```
 
 The kernel metadata pins the GPU type and Docker image because the kernel stayed queued

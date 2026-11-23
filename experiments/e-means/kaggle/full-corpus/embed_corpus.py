@@ -17,7 +17,7 @@ MODEL, REVISION = "intfloat/multilingual-e5-base", "d128750597153bb5987e10b1c349
 WORK, OUT = Path("/kaggle/temp/medleaf"), Path("/kaggle/working")
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pymupdf", "pydantic-settings",
-                "pyyaml", "qdrant-client>=1.12,<1.16", "httpx"], check=True)
+                "pyyaml", "httpx"], check=True)
 subprocess.run(["git", "clone", "-q", REPO, str(WORK)], check=True)
 subprocess.run(["git", "-C", str(WORK), "checkout", "-q", COMMIT], check=True)
 sys.path.insert(0, str(WORK / "src"))
@@ -27,10 +27,10 @@ import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from medleaf.config import Settings  # noqa: E402
+from medleaf.embed import E5Encoder  # noqa: E402
+from medleaf.ingest.cache import chunk_budget_for, parse_corpus  # noqa: E402
 from medleaf.ingest.download import download_medicine  # noqa: E402
 from medleaf.ingest.store import load_medicines  # noqa: E402
-from medleaf.retrieval.embed import E5Encoder  # noqa: E402
-from medleaf.retrieval.pipeline import chunk_budget_for, parse_corpus  # noqa: E402
 
 settings = Settings()
 medicines = load_medicines(settings.medicines_file)
@@ -70,13 +70,14 @@ vectors = np.concatenate(blocks)
 embed_seconds = time.perf_counter() - started
 assert len(vectors) == len(rows)
 
-# 3. Dev questions whose medicines were all kept (the held-out test split is not touched).
+# 3. Dev questions that have gold sections and name only kept medicines. The held-out
+#    test split is not touched.
 kept_slugs = {m.slug for m in kept}
 questions = [json.loads(line) for line in
              (WORK / "eval/datasets/retrieval-v1.jsonl").read_text(encoding="utf-8").splitlines()
              if line.strip()]
 dev = [q for q in questions if q["split"] == "dev"]
-usable = [q for q in dev if set(q["medicines"]) <= kept_slugs]
+usable = [q for q in dev if q["gold_chunk_ids"] and set(q["medicines"]) <= kept_slugs]
 query_vectors = np.asarray(encoder.encode_queries([q["question"] for q in usable]),
                            dtype=np.float32)
 

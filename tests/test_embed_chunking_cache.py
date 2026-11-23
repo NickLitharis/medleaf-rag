@@ -1,61 +1,31 @@
-"""Fast unit tests for the M2 retrieval primitives.
+"""Fast unit tests for embedding prefixes, chunk splitting and the parse cache.
 
-These need no torch, no Qdrant and no network: they pin the contracts that the
-heavier tests and the acceptance run rely on — accent folding, the e5 prefix rule,
-language-distinct point IDs, exact filters and the index manifest.
+These need no torch and no network: they pin the e5 prefix rule, how long sections are
+split to fit the model window, and when a cached parse may be reused.
 """
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
-import subprocess
-import sys
 from pathlib import Path
 
 import pytest
-from qdrant_client import models
 
 from medleaf.config import Settings
-from medleaf.ingest.chunk import ChunkBudget, build_sections, split_long_text
-from medleaf.ingest.pipeline import PARSER_CACHE_VERSION
-from medleaf.ingest.store import load_medicines
-from medleaf.models import DocKind, DocumentRef, Lang, Medicine, Section
-from medleaf.retrieval.embed import (
-    PASSAGE_PREFIX,
-    QUERY_PREFIX,
-    E5Encoder,
-    prefixed,
-)
-from medleaf.retrieval.index import (
-    IndexMissingError,
-    build_filter,
-    build_manifest,
-    corpus_version_for,
-    load_manifest,
-    payload_for,
-    point_id,
-    write_manifest,
-)
-from medleaf.retrieval.pipeline import (
-    IndexBuildError,
+from medleaf.embed import PASSAGE_PREFIX, QUERY_PREFIX, E5Encoder, prefixed
+from medleaf.ingest.cache import (
+    CorpusError,
     ParsedCache,
     cache_is_valid,
     parse_with_cache,
     resolved_corpus_version,
 )
-from medleaf.retrieval.service import RetrievalService, SearchHit, SearchResponse
-from medleaf.retrieval.text import (
-    drop_terms,
-    fold_text,
-    query_sparse_vector,
-    sparse_vector,
-    stem,
-    token_id,
-    tokenize,
-)
+from medleaf.ingest.chunk import ChunkBudget, build_sections, split_long_text
+from medleaf.ingest.pipeline import PARSER_CACHE_VERSION
+from medleaf.ingest.store import load_medicines
+from medleaf.models import DocKind, DocumentRef, Lang, Medicine, Section
 
 
 def _collapse(text: str) -> str:
@@ -90,79 +60,18 @@ class _RecordingModel:
         return [[0.0] * self._dimension for _ in texts]
 
 
-def test_fold_text_strips_greek_accents_and_normalises_final_sigma() -> None:
-    assert fold_text("ΑΝΕΠΙΘΎΜΗΤΕΣ ΕΝΈΡΓΕΙΕΣ") == "ανεπιθυμητεσ ενεργειεσ"
-    assert fold_text("ΥΠΕΡΔΟΣΟΛΟΓΊΑ") == "υπερδοσολογια"
-    assert fold_text("Nausea") == "nausea"
 
 
-def test_tokens_match_regardless_of_accents_or_case() -> None:
-    assert tokenize("Ανεπιθύμητες Ενέργειες") == tokenize("ΑΝΕΠΙΘΥΜΗΤΕΣ ΕΝΕΡΓΕΙΕΣ")
-    assert tokenize("Nausea, vomiting; severe") == ["nausea", "vomiting", "severe"]
 
 
-def test_greek_inflections_share_a_token() -> None:
-    """Question and source forms seen in the Greek Ozempic retrieval miss."""
-    pairs = [
-        ("ναυτίας", "Ναυτία"),
-        ("σεμαγλουτίδης", "σεμαγλουτίδη"),
-        ("δόσεις", "δόση"),
-        ("ανεπιθύμητες", "ανεπιθύμητων"),
-        ("αντενδείξεις", "αντένδειξη"),
-    ]
-    for question_form, source_form in pairs:
-        assert tokenize(question_form) == tokenize(source_form), question_form
-    # Latin tokens, digits and short Greek stems are left alone.
-    assert stem("nausea") == "nausea"
-    assert stem("mg") == "mg"
-    assert stem("19") == "19"
-    assert stem("οδο") == "οδο"
 
 
-def test_sparse_vector_uses_folded_tokens() -> None:
-    accented = sparse_vector("Θρομβοεμβολικά επεισόδια")
-    plain = sparse_vector("θρομβοεμβολικα επεισοδια")
-    assert accented.indices == plain.indices
-    assert accented.values == plain.values
-    assert accented.indices  # the Greek terms are genuinely present
 
 
-def test_query_sparse_vector_drops_function_words() -> None:
-    """A query keeps its rare content terms and loses function words."""
-    query = query_sparse_vector("What are the contraindications of Eliquis?")
-    keywords = {token_id(token) for token in ("contraindications", "eliquis")}
-    stop = {token_id(token) for token in ("what", "are", "the", "of")}
-    assert keywords <= set(query.indices)
-    assert not (stop & set(query.indices))
-    greek = query_sparse_vector("Ποιες είναι οι αντενδείξεις του Eliquis;")
-    assert token_id("αντενδειξ") in greek.indices
-    assert token_id("ποιες") not in greek.indices
 
 
-def test_drop_terms_removes_the_filter_redundant_medicine_name() -> None:
-    """The medicine already applied as a filter is not searched for again."""
-    assert drop_terms("What are the contraindications of Eliquis?", ["eliquis"]) == (
-        "What are the contraindications of"
-    )
 
 
-def test_token_id_is_stable_across_processes_not_builtin_hash() -> None:
-    """The sparse index must survive a process restart, so it cannot use ``hash()``."""
-    script = "from medleaf.retrieval.text import token_id; print(token_id('ανεπιθυμητεσ'))"
-    env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src")}
-    outputs = []
-    for seed in ("0", "1"):
-        completed = subprocess.run(
-            [sys.executable, "-c", script],
-            check=True,
-            capture_output=True,
-            text=True,
-            env={**env, "PYTHONHASHSEED": seed},
-        )
-        outputs.append(completed.stdout.strip())
-    assert outputs[0].isdigit()
-    assert outputs[0] == outputs[1], "token IDs must not depend on PYTHONHASHSEED"
-    assert token_id("ανεπιθυμητεσ") == int(outputs[0])
 
 
 def test_prefixed_rejects_a_query_passed_as_a_passage() -> None:
@@ -195,112 +104,14 @@ def test_e5_encoder_refuses_a_query_string_in_the_passage_path() -> None:
         encoder.encode_queries([f"{PASSAGE_PREFIX}leaked"])
 
 
-def test_point_ids_are_stable_and_distinct_per_language() -> None:
-    english = point_id("eliquis:smpc:4.5", "en")
-    greek = point_id("eliquis:smpc:4.5", "el")
-    assert english != greek, "each language needs its own physical point"
-    assert english == point_id("eliquis:smpc:4.5", "en"), "point IDs must be reproducible"
-    assert len(english) == 36 and english.count("-") == 4
 
 
-def test_build_filter_uses_exact_matches_on_every_supported_field() -> None:
-    assert build_filter() is None
-    query_filter = build_filter(
-        medicine=["eliquis", "xarelto"],
-        lang="el",
-        doc="smpc",
-        corpus_version="v1",
-        active_substance="apixaban",
-    )
-    assert query_filter is not None
-    field_conditions = {
-        condition.key: condition.match
-        for condition in (query_filter.must or [])
-        if isinstance(condition, models.FieldCondition)
-    }
-    assert set(field_conditions) == {
-        "medicine",
-        "lang",
-        "doc",
-        "corpus_version",
-        "active_substance",
-    }
-    medicine_match = field_conditions["medicine"]
-    assert isinstance(medicine_match, models.MatchAny)
-    assert medicine_match.any == ["eliquis", "xarelto"]
-    for key, expected in (
-        ("lang", "el"),
-        ("doc", "smpc"),
-        ("corpus_version", "v1"),
-        ("active_substance", "apixaban"),
-    ):
-        value_match = field_conditions[key]
-        assert isinstance(value_match, models.MatchValue)
-        assert value_match.value == expected
 
 
-def test_manifest_roundtrip_and_incomplete_flag(tmp_path: Path) -> None:
-    encoder = E5Encoder(_RecordingModel(dimension=8), model_id="m", revision="rev")
-    manifest = build_manifest(
-        collection="c",
-        corpus_version="v",
-        corpus_sha256_value="0" * 64,
-        encoder=encoder,
-        dense_vector_name="dense",
-        sparse_vector_name="sparse",
-        chunk_counts={"eliquis:en": 3, "eliquis:el": 2},
-        medicines=["eliquis"],
-        languages=["en", "el"],
-        missing=["humira:el"],
-    )
-    assert manifest.total_chunks == 5
-    assert manifest.is_complete is False, "missing documents must make the manifest incomplete"
-    complete = manifest.model_copy(update={"missing": []})
-    assert complete.is_complete is True
-
-    path = tmp_path / "manifest.json"
-    write_manifest(path, manifest)
-    assert load_manifest(path) == manifest
-    with pytest.raises(IndexMissingError):
-        load_manifest(tmp_path / "absent.json")
 
 
-def test_index_built_with_another_tokenizer_is_not_served(tmp_path: Path) -> None:
-    """Stale sparse tokens would silently degrade results, so readiness and search refuse."""
-    encoder = E5Encoder(_RecordingModel(dimension=8), model_id="m", revision="rev")
-    settings = Settings(data_dir=tmp_path)
-    manifest = build_manifest(
-        collection="c",
-        corpus_version="v",
-        corpus_sha256_value="0" * 64,
-        encoder=encoder,
-        dense_vector_name="dense",
-        sparse_vector_name="sparse",
-        chunk_counts={"eliquis:en": 3},
-        medicines=["eliquis"],
-        languages=["en"],
-        missing=[],
-    )
-    write_manifest(
-        settings.index_manifest_file,
-        manifest.model_copy(update={"tokenizer": "medleaf-tokenizer-1"}),
-    )
-    service = RetrievalService(settings, encoder=encoder)
-    state = service.ready()
-    assert state.ready is False
-    assert "medleaf-tokenizer-1" in state.detail
-    with pytest.raises(IndexMissingError, match="run `medleaf index build`"):
-        service.search("nausea")
 
 
-def test_corpus_version_is_derived_from_the_manifest_bytes(tmp_path: Path) -> None:
-    medicines_file = tmp_path / "medicines.yaml"
-    medicines_file.write_text("medicines: []\n", encoding="utf-8")
-    version = corpus_version_for(medicines_file)
-    assert version.startswith("medicines.yaml:")
-    assert len(version) == len("medicines.yaml:") + 12
-    medicines_file.write_text("medicines: []\n# changed\n", encoding="utf-8")
-    assert corpus_version_for(medicines_file) != version
 
 
 def test_m2_corpus_manifest_has_the_target_medicines_both_languages_and_pins() -> None:
@@ -322,37 +133,6 @@ def test_m2_corpus_manifest_has_the_target_medicines_both_languages_and_pins() -
     assert len(therapy_areas) >= 8, f"expected several therapy areas, got {sorted(therapy_areas)}"
 
 
-def test_search_response_serialises_provenance() -> None:
-    hit = SearchHit(
-        rank=1,
-        score=0.5,
-        point_id="p",
-        chunk_id="eliquis:smpc:4.5",
-        medicine="eliquis",
-        lang="en",
-        doc="smpc",
-        section="4.5",
-        title="Interaction with other medicinal products",
-        text="text",
-        source_url="https://www.ema.europa.eu/en/documents/product-information/eliquis-epar-product-information_en.pdf",
-        revision_date="2026-04-01",
-        corpus_version="v1",
-    )
-    response = SearchResponse(
-        query="q",
-        lang="en",
-        corpus_version="v1",
-        prefetch_limit=30,
-        limit=10,
-        count=1,
-        latency_ms=1.5,
-        embed_model="intfloat/multilingual-e5-base",
-        embed_revision="rev",
-        results=[hit],
-    )
-    payload = json.loads(response.model_dump_json())
-    assert payload["results"][0]["source_url"].endswith("_en.pdf")
-    assert payload["fusion"] == "rrf"
 
 
 # --- Long sections must be split, never silently truncated -------------------------
@@ -491,7 +271,7 @@ def test_pinned_checksum_mismatch_aborts_before_parsing(tmp_path: Path) -> None:
     pdf.write_bytes(b"not the pinned PDF")
     medicine = _pinned_medicine("a" * 64)
 
-    with pytest.raises(IndexBuildError, match="is pinned to"):
+    with pytest.raises(CorpusError, match="is pinned to"):
         parse_with_cache(settings, medicine, Lang.EN, budget=_word_budget(512))
     assert not settings.parsed_path("demo", "en").exists(), "no cache for a rejected PDF"
 
@@ -562,18 +342,5 @@ def _payload_section(**overrides: object) -> Section:
     return Section.model_validate(values)
 
 
-def test_payload_carries_manifest_metadata_and_part_indices() -> None:
-    payload = payload_for(
-        _payload_section(), {"active_substance": "apixaban", "atc_code": "B01AF02"}
-    )
-    assert payload["active_substance"] == "apixaban"
-    assert payload["atc_code"] == "B01AF02"
-    assert payload["part"] == 2 and payload["parts_total"] == 3
-    assert payload["doc"] == "smpc" and payload["lang"] == "en"
 
 
-def test_payload_omits_metadata_the_manifest_does_not_have() -> None:
-    """Absent metadata is absent, not invented: no substance name is ever guessed."""
-    payload = payload_for(_payload_section())
-    assert "active_substance" not in payload
-    assert "atc_code" not in payload

@@ -1,7 +1,7 @@
 [project]
 name = "medleaf-rag"
 version = "0.1.0"
-description = "Bilingual (Greek/English) RAG question answering over official EU medicine information, with citations and medical safety guardrails."
+description = "Comparing k-means and e-means clustering of multilingual E5 embeddings of official EU medicine information (Greek/English)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -15,27 +15,19 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Indexing is heavy (torch + transformers); the fast test suite does not need it.
-retrieval = [
+# Embedding is heavy (torch + transformers); the fast test suite does not need it.
+embedding = [
     "numpy>=1.26",
-    "qdrant-client>=1.12,<1.16",
     "sentence-transformers>=3.0,<6",
     "huggingface_hub>=0.23",
 ]
-api = [
-    "fastapi>=0.110",
-    "uvicorn>=0.30",
+# The clustering comparison in experiments/e-means.
+compare = [
+    "numpy>=1.26",
 ]
 dev = [
-    "fastapi>=0.110",
-    "httpx>=0.27",
     "pytest>=8.2",
-    "pytest-asyncio>=0.23",
-    "qdrant-client>=1.12,<1.16",
     "ruff>=0.5",
-]
-services = [
-    "medleaf-rag[api,retrieval]",
 ]
 
 [project.scripts]
@@ -53,7 +45,6 @@ testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 markers = [
     "network: test that downloads from ema.europa.eu (deselect with '-m \"not network\"')",
-    "qdrant: test that needs a real Qdrant service (deselect with '-m \"not qdrant\"')",
 ]
 
 [tool.ruff]

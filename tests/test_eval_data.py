@@ -1,4 +1,4 @@
-"""M3: retrieval metrics, the PR gate and the eval dataset's integrity (no Qdrant, no model)."""
+"""Retrieval metrics and the eval dataset's integrity (no model, no network)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from medleaf.eval.metrics import gold_by_medicine, hit_rank, score
-from medleaf.eval.runner import evaluate, gate, load_questions
+from medleaf.eval.questions import load_questions
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = ROOT / "eval" / "datasets" / "retrieval-v1.jsonl"
@@ -36,32 +36,6 @@ def test_score_counts_and_mrr() -> None:
     assert result["recall_at_5"] == {"hits": 2, "rate": 0.5}
     assert result["recall_at_10"] == {"hits": 3, "rate": 0.75}
     assert result["mrr_at_10"] == round((1 + 1 / 4 + 1 / 7) / 4, 4)
-
-
-def test_evaluate_skips_questions_without_gold(tmp_path: Path) -> None:
-    rows = [
-        {"id": "q1", "split": "dev", "lang": "en", "question": "storage of a",
-         "category": "single_section", "medicines": ["a"], "gold_chunk_ids": ["a:smpc:6.4"]},
-        {"id": "q2", "split": "dev", "lang": "el", "question": "paracetamol",
-         "category": "not_in_corpus", "medicines": [], "gold_chunk_ids": [], "must_refuse": True},
-    ]
-    path = tmp_path / "d.jsonl"
-    path.write_text("\n".join(json.dumps(r) for r in rows), encoding="utf-8")
-    result = evaluate(load_questions(path, "dev"), lambda query: ["a:smpc:6.4"])
-    assert result["unscored_no_gold"] == 1
-    assert result["overall"]["recall_at_5"]["hits"] == 1
-    assert set(result["by_lang"]) == {"en"}
-
-
-def _result(hits: int, total: int = 50) -> dict[str, object]:
-    return {"overall": {"total": total, "recall_at_5": {"hits": hits}}}
-
-
-def test_gate_allows_a_one_question_drop_and_fails_on_two() -> None:
-    assert gate(_result(40), _result(40)) == []
-    assert gate(_result(39), _result(40)) == []
-    assert gate(_result(38), _result(40))
-    assert gate(_result(45, total=51), _result(40))  # dataset changed: baseline must move
 
 
 def test_dataset_is_consistent_with_the_splits() -> None:

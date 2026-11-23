@@ -1,1 +1,1 @@
-"""Retrieval evaluation: dataset loading, metrics, runner and the CI gate (SPEC §11, §13)."""
+"""Evaluation data and metrics: the question set and Recall@k / MRR scoring."""

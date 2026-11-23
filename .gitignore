@@ -26,6 +26,9 @@ htmlcov/
 eval/results/
 !eval/results/.gitkeep
 
+# Embeddings and results pulled from Kaggle (experiments/e-means)
+experiments/e-means/out/
+
 # OS / editor
 .Thumbs.db
 Desktop.ini
@@ -34,6 +37,5 @@ Desktop.ini
 
 # Derived artifacts (rebuilt from data/medicines.yaml + data/raw)
 data/parsed/
-data/index/
 data/cache/
 data/models/

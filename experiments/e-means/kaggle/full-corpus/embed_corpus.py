@@ -14,7 +14,8 @@ import time
 from pathlib import Path
 
 REPO = "https://github.com/NickLitharis/medleaf-rag"
-COMMIT = "bd805358da65d1e3c59e698ecd586e01eda6ae38"
+# A pushed commit that has medleaf.embed and medleaf.ingest.cache.
+COMMIT = "90255aaa080fd060da55046de522f6b5efa601d7"
 MODEL, REVISION = "intfloat/multilingual-e5-base", "d128750597153bb5987e10b1c3493a34e5a4502a"
 WORK, OUT = Path("/kaggle/temp/medleaf"), Path("/kaggle/working")
 

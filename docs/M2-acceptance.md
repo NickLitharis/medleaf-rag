@@ -86,7 +86,7 @@ PYTHONPATH=src python -m medleaf.cli download --workers 2
 |---|---|
 | Model | `intfloat/multilingual-e5-base`, revision `d128750597153bb5987e10b1c3493a34e5a4502a` |
 | Dimension | 768 dense; sparse vectors with Qdrant `Modifier.IDF` |
-| Parser / parse-cache version | `medleaf-parser-3` (`PARSER_CACHE_VERSION`) |
+| Parser / parse-cache version | `medleaf-parser-4` (`PARSER_CACHE_VERSION`) |
 | Sparse tokenizer version | `medleaf-tokenizer-1` (`TOKENIZER_VERSION`) |
 | Weights | `model.safetensors`, `trust_remote_code` never enabled; cached under `data/models` |
 | Prefixes | `passage: ` for chunks, `query: ` for questions, enforced in `medleaf.retrieval.embed` |

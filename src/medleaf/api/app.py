@@ -347,8 +347,7 @@ async def _answer_events(
         raw = "".join(parts)
         if source_quotes_only:
             raw = parse_quote_selection(raw, sources, lang)
-        answer = render_numerical_quotes(raw, sources)
-        text = citations.feed(answer) + citations.flush()
+        text = render_numerical_quotes(raw, sources, citations)
         if text:
             yield _sse("token", {"text": text})
     except NumericalGroundingError:

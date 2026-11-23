@@ -183,8 +183,7 @@ def test_live_numerical_quotes(case: dict[str, Any], question: dict[str, Any]) -
         print(f'\nRaw {case["id"]}: {question["text"]}\n{raw}\n')
         if settings.llm_source_quotes_only:
             raw = parse_quote_selection(raw, sources, case["lang"])
-        rendered = render_numerical_quotes(raw, sources)
-        return citations.feed(rendered) + citations.flush()
+        return render_numerical_quotes(raw, sources, citations)
 
     response = asyncio.run(asyncio.wait_for(answer(), timeout=60))
     print(f'\n{case["id"]}: {question["text"]}\n{response}\n')

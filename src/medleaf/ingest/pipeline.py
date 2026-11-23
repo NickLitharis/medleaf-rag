@@ -23,7 +23,7 @@ from medleaf.models import DocKind, Lang, Medicine, ParsedDocument, Section
 
 #: Bump when parsing or chunking changes in a way that alters Section output. It is part
 #: of the parse-cache key, so a stale cached parse can never be reused after a fix.
-PARSER_CACHE_VERSION = "medleaf-parser-3"
+PARSER_CACHE_VERSION = "medleaf-parser-4"
 
 #: SmPC sections whose pages can carry flattened side-effect tables (SPEC section 8).
 #: Table detection is the expensive part of parsing, so it runs only on these spans.

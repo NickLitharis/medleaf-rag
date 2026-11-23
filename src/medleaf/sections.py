@@ -153,7 +153,6 @@ _CROSS_REF_RE = re.compile(
     r"(^\s*(see|βλ\.|βλεπε)\b)|(\bsee sections?\b)|(\bβλ\.\s*παραγραφ)|(^\s*\(see)",
     re.IGNORECASE,
 )
-_SENTENCE_TAIL_RE = re.compile(r"(and$|or$|\.\s*$)")
 
 
 def _matches_any(title: str, hints: tuple[str, ...]) -> bool:

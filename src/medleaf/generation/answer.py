@@ -173,32 +173,41 @@ def parse_quote_selection(raw: str, sources: Sequence[SearchHit], lang: str) -> 
     return heading + "\n\n" + "\n\n".join(f"- [{ref}]" for ref in dict.fromkeys(refs))
 
 
-def render_numerical_quotes(answer: str, sources: Sequence[SearchHit]) -> str:
-    """Expand trusted source references, rejecting generated digits before display.
+def render_numerical_quotes(
+    answer: str, sources: Sequence[SearchHit], citations: CitationFilter | None = None,
+) -> str:
+    """Return the answer with ``[quote:N]`` expanded and citations checked, ready to show.
+
+    Only the model's own text goes through the citation filter. A quoted source sentence
+    is inserted verbatim afterwards, so brackets inside it (for example "[see section
+    4.4]") are not mistaken for citation keys. Each quote's citation is recorded in
+    ``citations.used``. Generated digits and unknown quote references raise
+    ``NumericalGroundingError``.
 
     This is not a semantic verifier: a model can still choose an irrelevant quotation
     or give an incorrect qualitative explanation. Call before emitting ANY answer text.
     """
     quotes = _source_quotes(sources)
+    citations = citations or CitationFilter({citation_key(hit) for hit in sources})
     reference = re.compile(r"\[quote:(\d+)\]")
-
-    def resolve(match: re.Match[str]) -> str:
+    pieces: list[str] = []
+    last = 0
+    for match in [*reference.finditer(answer), None]:
+        end = match.start() if match else len(answer)
+        model_text = citations.feed(answer[last:end]) + citations.flush()
+        if any(char.isdigit() for char in re.sub(r"\[[^\]]*\]", "", model_text)):
+            raise NumericalGroundingError("Unquoted generated number")
+        pieces.append(model_text)
+        if match is None:
+            break
         key = f"quote:{match[1]}"
         if key not in quotes:
             raise NumericalGroundingError("Unknown numerical source quotation")
         text, citation = quotes[key]
-        return f'“{text}” [{citation}]'
-
-    # Validate references even when the rest of the answer contains no raw digits.
-    for match in reference.finditer(answer):
-        resolve(match)
-    unquoted = reference.sub("", answer)
-    citations = CitationFilter({citation_key(hit) for hit in sources})
-    unquoted = citations.feed(unquoted) + citations.flush()
-    unquoted = re.sub(r"\[[^\]]*\]", "", unquoted)  # remaining keys are known citations
-    if any(char.isdigit() for char in unquoted):
-        raise NumericalGroundingError("Unquoted generated number")
-    return reference.sub(resolve, answer)
+        citations.mark_used(citation)
+        pieces.append(f"“{text}” [{citation}]")
+        last = match.end()
+    return "".join(pieces)
 
 
 class CitationFilter:
@@ -238,6 +247,11 @@ class CitationFilter:
             out.append(self._check(self._held[1:end]))
             self._held = self._held[end + 1 :]
         return "".join(out)
+
+    def mark_used(self, key: str) -> None:
+        """Record a citation the server itself inserted (a verbatim source quote)."""
+        if key not in self.used:
+            self.used.append(key)
 
     def flush(self) -> str:
         """Release whatever is still held at the end of the stream."""

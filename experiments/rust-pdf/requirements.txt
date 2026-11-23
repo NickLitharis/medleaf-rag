@@ -1,7 +1,0 @@
-annotated-types==0.8.0
-PyMuPDF==1.28.2
-pydantic==2.14.4
-pydantic-core==2.50.5
-PyYAML==6.0.4
-typing-extensions==4.16.0
-typing-inspection==0.4.5

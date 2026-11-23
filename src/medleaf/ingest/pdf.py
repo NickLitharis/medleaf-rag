@@ -15,7 +15,7 @@ Layout reality (verified against real EMA files, 2026-10-15):
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 
 import fitz  # PyMuPDF
@@ -56,7 +56,10 @@ LABELLING_START_RE = re.compile(
 # Running heads/footers that would otherwise land inside section text.
 PAGE_NUMBER_RE = re.compile(r"^\s*\d{1,4}\s*$")
 PAGE_NUMBER_INLINE_RE = re.compile(r"^\s*\d{1,4}\s+(?=\S)")
-SOFT_HYPHEN_RE = re.compile(r"(\w)-\s*\n\s*(\w)")
+# A hyphen that ends a line is kept: it may be part of the term ("P-gp", "HIV-1", "5-HT",
+# "non-steroidal"), and dropping it would change the clinical text. Soft hyphens
+# (U+00AD) are removed earlier, in ``clean_line``.
+LINE_END_HYPHEN_RE = re.compile(r"(\w)-\s*\n\s*(\w)")
 
 # A table of contents lists several section numbers a few lines apart. Body headings
 # are separated by the section text between them, so a run this tight and this long
@@ -187,7 +190,7 @@ def _scan_headings(
     end: int,
     numbers: tuple[str, ...],
     pattern: re.Pattern[str],
-    title_fn: object,
+    title_fn: Callable[[str, str], bool],
 ) -> list[HeadingHit]:
     """All valid numbered headings in reading order, including repeated copies.
 
@@ -207,10 +210,7 @@ def _scan_headings(
         if number not in numbers:
             continue
         title = match.group("title").strip()
-        validate = title_fn  # callable(number, title) -> bool
-        if not callable(validate):  # pragma: no cover - defensive
-            continue
-        if not validate(number, title):
+        if not title_fn(number, title):
             continue
         hits.append(HeadingHit(index=index, key=number, title=title))
     return hits
@@ -266,6 +266,11 @@ def _starts_new_copy(hits: list[HeadingHit], position: int, order: dict[str, int
     return following == [1, 2]
 
 
+def _leaflet_title(_number: str, title: str) -> bool:
+    """Leaflet headings are product-specific, so the number does not narrow the match."""
+    return looks_like_leaflet_heading(title)
+
+
 def first_copy_headings(
     lines: list[RawLine],
     *,
@@ -294,13 +299,13 @@ def first_copy_headings(
         hard_end = min([*ends, len(lines)])
         numbers = SMPC_NUMBERS
         pattern = SMPC_HEADING_RE
-        title_fn: object = smpc_title
+        title_fn: Callable[[str, str], bool] = smpc_title
     else:
         start = boundaries.get("leaflet", boundaries.get("annex3", 0))
         hard_end = len(lines)
         numbers = LEAFLET_NUMBERS
         pattern = LEAFLET_HEADING_RE
-        title_fn = lambda number, title: looks_like_leaflet_heading(title)  # noqa: E731
+        title_fn = _leaflet_title
 
     order = _order_map(numbers)
     scanned = _scan_headings(lines, start, hard_end, numbers, pattern, title_fn)
@@ -352,7 +357,7 @@ def split_sections(
 
 def rebuild_paragraphs(text: str) -> str:
     """Join wrapped lines back into paragraphs, keeping blank-line separation."""
-    text = SOFT_HYPHEN_RE.sub(r"\1\2", text)
+    text = LINE_END_HYPHEN_RE.sub(r"\1-\2", text)
     lines = text.split("\n")
     paragraphs: list[str] = []
     buffer: list[str] = []

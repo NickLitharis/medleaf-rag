@@ -31,21 +31,7 @@ from medleaf.models import DocKind, Lang, Section
 #: heading row from a reaction that sits only in the first frequency column.
 _BOLD_FLAG = 1 << 4
 
-# Table detection: a paragraph made of pipe-separated cells produced by the flattener.
-FREQUENCY_WORDS = {
-    "very common",
-    "common",
-    "uncommon",
-    "rare",
-    "very rare",
-    "not known",
-    "πολύ συχνές",
-    "συχνές",
-    "όχι συχνές",
-    "σπάνιες",
-    "πολύ σπάνιες",
-    "μη γνωστές",
-}
+# Frequency bands EMA prints in adverse-reaction tables (English and Greek).
 FREQUENCY_RE = re.compile(
     r"(very common|common|uncommon|rare|very rare|not known"
     r"|πολ[υύ] συχν[εέ]ς|συχν[εέ]ς|[οό]χι συχν[εέ]ς"

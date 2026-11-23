@@ -178,6 +178,21 @@ def test_ask_renders_a_quote_reference_split_across_provider_tokens() -> None:
     assert events[-1][1]["refused"] is False  # type: ignore[index]
 
 
+def test_ask_keeps_brackets_inside_a_verbatim_source_quote() -> None:
+    hit = _hit("eliquis:smpc:4.2")
+    hit.text = "The dose is twice daily [see section 4.4] in adults."
+    llm = _llm("Dosing: [quote:1] Also [Xarelto SmPC 1].")
+    client = TestClient(create_app(settings=Settings(), service=FakeService([hit]), generate=llm))  # type: ignore[arg-type]
+    events = _events(client.post("/v1/ask", json={"question": "What is the dose?"}).text)
+    names = [name for name, _ in events]
+    assert names == ["safety", "retrieval", "token", "citations", "done"]
+    # The quote keeps its bracketed cross-reference; the invented key is still dropped.
+    assert events[2][1]["text"] == f'Dosing: “{hit.text}” [Eliquis SmPC 4.2] Also .'  # type: ignore[index]
+    assert [c["key"] for c in events[3][1]] == ["Eliquis SmPC 4.2"]  # type: ignore[index,union-attr]
+    assert events[-1][1]["invented_citations"] == ["Xarelto SmPC 1"]  # type: ignore[index]
+    assert events[-1][1]["refused"] is False  # type: ignore[index]
+
+
 def test_ask_native_selection_renders_only_trusted_sources() -> None:
     hit = _hit("ozempic:smpc:4.8")
     hit.text = "Nausea occurred in 17% and 19.9% at 0.5 mg and 1 mg, respectively."

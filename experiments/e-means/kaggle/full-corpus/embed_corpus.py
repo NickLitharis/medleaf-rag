@@ -1,11 +1,13 @@
-"""Kaggle run: download the pinned EMA PDFs, chunk them with the project's code, embed.
+"""Kaggle run 2 of 2: chunk the saved PDFs with the project's code and embed them.
 
-PDFs whose checksum changed since `data/medicines.yaml` was pinned are left out, along
-with the dev questions that name them. Everything left out is listed in manifest.json.
+Reads the PDFs from the medleaf-ema-pdfs kernel's output (no EMA download). Medicines left
+out there (changed checksum) are skipped, with the dev questions that name them, and are
+listed in manifest.json.
 Output (/kaggle/working): vectors.npy, chunks.jsonl, query_vectors.npy, queries.jsonl,
 manifest.json. See ../../PLAN.md.
 """
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -17,38 +19,29 @@ MODEL, REVISION = "intfloat/multilingual-e5-base", "d128750597153bb5987e10b1c349
 WORK, OUT = Path("/kaggle/temp/medleaf"), Path("/kaggle/working")
 
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pymupdf", "pydantic-settings",
-                "pyyaml", "httpx"], check=True)
+                "pyyaml"], check=True)
 subprocess.run(["git", "clone", "-q", REPO, str(WORK)], check=True)
 subprocess.run(["git", "-C", str(WORK), "checkout", "-q", COMMIT], check=True)
 sys.path.insert(0, str(WORK / "src"))
 
-import httpx  # noqa: E402
 import numpy as np  # noqa: E402
 import torch  # noqa: E402
 
 from medleaf.config import Settings  # noqa: E402
 from medleaf.embed import E5Encoder  # noqa: E402
 from medleaf.ingest.cache import chunk_budget_for, parse_corpus  # noqa: E402
-from medleaf.ingest.download import download_medicine  # noqa: E402
 from medleaf.ingest.store import load_medicines  # noqa: E402
 
 settings = Settings()
 medicines = load_medicines(settings.medicines_file)
 
-# 1. Download; keep only medicines whose PDFs (both languages) match their pinned checksum.
-left_out = {}  # slug -> reason
-with httpx.Client(headers={"User-Agent": settings.user_agent}, follow_redirects=True,
-                  timeout=settings.request_timeout_s) as client:
-    for medicine in medicines:
-        try:
-            results = download_medicine(client, medicine, settings.raw_dir)
-        except Exception as error:
-            left_out[medicine.slug] = f"download failed: {error}"
-            continue
-        if any(r.changed or r.status != "verified" for r in results):
-            left_out[medicine.slug] = "checksum changed or language mismatch"
-        time.sleep(0.2)
-kept = [m for m in medicines if m.slug not in left_out]
+# 1. Use the PDFs saved by the medleaf-ema-pdfs kernel; nothing is downloaded here.
+found = list(Path("/kaggle/input").rglob("pdfs-manifest.json"))
+assert found, "run the medleaf-ema-pdfs kernel first and attach it as an input"
+pdf_manifest = json.loads(found[0].read_text(encoding="utf-8"))
+shutil.copytree(found[0].parent / "pdfs", settings.raw_dir, dirs_exist_ok=True)
+left_out = pdf_manifest["left_out"]
+kept = [m for m in medicines if m.slug in set(pdf_manifest["kept"])]
 print(f"kept {len(kept)} medicines, left out {len(left_out)}: {sorted(left_out)}")
 
 # 2. Chunk with the project's parser, then embed exactly as `index build` does.

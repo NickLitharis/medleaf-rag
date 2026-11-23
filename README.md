@@ -33,17 +33,20 @@ The plan, settings and decision rule are in
 
 ```bash
 python -m pip install -e ".[compare,dev]"
+cd experiments/e-means/kaggle
 
-# 1. Embed on Kaggle (needs a Kaggle token); this downloads the pinned PDFs itself
-cd experiments/e-means/kaggle/full-corpus
-kaggle kernels push -p . --accelerator NvidiaTeslaT4
-kaggle kernels output nikoslitharis/medleaf-embed-corpus -p ../../out
+# 1. Once: a small kernel downloads and checksum-verifies the PDFs (needs a Kaggle token)
+kaggle kernels push -p ema-pdfs
 
-# 2. Compare the clusterings locally
-cd ../..  && python experiment.py out
+# 2. Embed on a GPU; this reads kernel 1's output, so EMA is not contacted again
+kaggle kernels push -p full-corpus --accelerator NvidiaTeslaT4
+kaggle kernels output nikoslitharis/medleaf-embed-corpus -p ../out
+
+# 3. Compare the clusterings, offline and repeatable
+cd .. && python experiment.py out
 ```
 
-The kernel leaves out any PDF whose checksum no longer matches `data/medicines.yaml`
+The first kernel leaves out any PDF whose checksum no longer matches `data/medicines.yaml`
 (EMA has published a newer version) and lists it in `manifest.json`.
 
 ## The corpus tools

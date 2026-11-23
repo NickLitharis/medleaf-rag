@@ -37,13 +37,23 @@ small difference is noise; the results file shows all seeds.
 
 ## Run
 
+Nothing is downloaded twice. The PDFs are fetched once, by their own small kernel, and the
+embedding kernel reads that kernel's output. The vectors are pulled to `out/` once, so
+clustering runs need neither Kaggle nor EMA.
+
 ```
-# on Kaggle (from kaggle/full-corpus/), then download the output
-kaggle kernels push -p . --accelerator NvidiaTeslaT4
-kaggle kernels output nikoslitharis/medleaf-embed-corpus -p ../../out
-# locally
-python experiment.py out        # from experiments/e-means; writes out/results.json
+cd experiments/e-means/kaggle
+# 1. Once (and again only if data/medicines.yaml changes): download + verify the PDFs
+kaggle kernels push -p ema-pdfs            # CPU; wait until it completes
+# 2. Embed (GPU); reads kernel 1's output as an input
+kaggle kernels push -p full-corpus --accelerator NvidiaTeslaT4
+kaggle kernels output nikoslitharis/medleaf-embed-corpus -p ../out
+# 3. Compare, as often as you like, offline
+cd .. && python experiment.py out          # writes out/results.json
 ```
+
+Re-run step 2 only if the parser, the model or the chunk budget changes. Re-run step 1
+only if the corpus definition changes.
 
 The kernel metadata pins the GPU type and Docker image because the kernel stayed queued
 without them. Which setting mattered was not isolated; keep all of them.

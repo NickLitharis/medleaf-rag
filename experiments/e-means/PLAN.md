@@ -8,16 +8,17 @@ as often as k-means, and is it faster or tighter?
 
 ## Method
 
-1. **Embed on Kaggle** (`kaggle/full-corpus/embed_corpus.py`, T4 GPU). It downloads the
-   pinned EMA PDFs, chunks them with the project's own parser, and embeds them with the
-   pinned E5 model, then embeds the dev questions.
+1. **Download once, then embed, on Kaggle.** `kaggle/ema-pdfs` downloads the pinned EMA PDFs
+   and checks their checksums (CPU). `kaggle/full-corpus/embed_corpus.py` (T4 GPU) reads
+   those PDFs, chunks them with the project's own parser, embeds them with the pinned E5
+   model, and embeds the dev questions.
    - 28 of the 80 PDFs (14 medicines) no longer match their pinned checksums, so EMA has
      published newer versions. Those medicines, and the dev questions that name them, are
      left out and listed in `manifest.json`. Expect about 26 medicines and 43 of 63 dev
      questions.
    - The held-out test questions are never embedded.
 2. **Compare locally** (`experiment.py`): cluster the vectors with k-means and e-means
-   (3 seeds each), route each question to its nearest 1, 4 or 8 clusters, and score with
+   (3 seeds each), route each question to its nearest 1, 2 or 4 clusters, and score with
    the project's own `Recall@5` (`medleaf.eval.metrics`). The exhaustive search over all
    chunks is the reference.
    It also reports cluster purity: the share of chunks that carry their cluster's most
@@ -27,10 +28,19 @@ as often as k-means, and is it faster or tighter?
 
 ## Settings (fixed before seeing results)
 
-- k = square root of the chunk count. Both methods use the same k and seeds.
-- k-means: k-means++ start, 25 passes. e-means: k-means++ start, 2 passes over the data in
-  batches of 256, decay 0.99. This is a simplified e-means: no step annealing and no
-  dead-cluster revival (the paper has both).
+- k = square root of the chunk count. Both methods use the same k, the same k-means++ start
+  and the same seeds (0, 1, 2).
+- k-means: 25 passes.
+- e-means follows Algorithm 1 of the paper: exponential moving averages of cluster count and
+  sum over shuffled mini-batches, 3 passes over the data, a cosine-annealed step (down to
+  10% of its peak), dead-cluster revival every 5 batches, and the last-epoch-mean final
+  step. Batch size (32 to 512) and peak step (0.05 to 0.4) are picked by a small grid on
+  training error with a separate seed. No question is used to pick them. The script warns if
+  the best setting sits on the edge of the grid.
+- Differences from the paper: a k-means++ start instead of a random one, and the grid instead
+  of the paper's scaling laws (which the paper says are not tuned for small datasets).
+- Questions score only the clusters they are routed to. A chunk that was not searched never
+  counts as a hit, even when a searched cluster has fewer than 5 chunks.
 
 ## Decision
 
@@ -59,8 +69,8 @@ cd .. && python experiment.py out          # writes out/results.json
 Re-run step 2 only if the parser, the model or the chunk budget changes. Re-run step 1
 only if the corpus definition changes.
 
-The kernel metadata pins the GPU type and Docker image because the kernel stayed queued
-without them. Which setting mattered was not isolated; keep all of them.
+The GPU kernel's metadata pins the GPU type and Docker image because it stayed queued
+without them. The CPU download kernel needs neither (a CPU kernel ran fine on the default image). Which setting mattered was not isolated; keep all of them.
 
 ## Results so far
 
